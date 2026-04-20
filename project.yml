@@ -1,0 +1,101 @@
+name: BirdPokemon
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    DEVELOPMENT_TEAM: ""
+  configs:
+    Debug:
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+    Release:
+      SWIFT_COMPILATION_MODE: wholemodule
+
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    minVersion: 10.27.0
+  Nuke:
+    url: https://github.com/kean/Nuke
+    minVersion: 12.7.0
+
+targets:
+  BirdPokemon:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: BirdPokemon
+        excludes:
+          - "Supporting/Info.plist"
+    resources:
+      - BirdPokemon/Resources
+    configFiles:
+      Debug: Secrets.xcconfig
+      Release: Secrets.xcconfig
+    info:
+      path: BirdPokemon/Supporting/Info.plist
+      properties:
+        CFBundleDisplayName: BirdPokemon
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIRequiredDeviceCapabilities:
+          - arm64
+        ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: "BirdPokemon uses your camera to photograph birds you spot."
+        NSPhotoLibraryUsageDescription: "Pick an existing bird photo to log a sighting."
+        NSPhotoLibraryAddUsageDescription: "Save your bird photos to your Photos library."
+        NSLocationWhenInUseUsageDescription: "Attach the location of each bird sighting so you can see them on the map."
+        EBirdAPIKey: "$(EBIRD_API_KEY)"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.birdpokemon
+        CODE_SIGN_ENTITLEMENTS: BirdPokemon/Supporting/BirdPokemon.entitlements
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: "0.1.0"
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1"
+    dependencies:
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseFirestore
+      - package: Firebase
+        product: FirebaseFirestoreSwift
+      - package: Firebase
+        product: FirebaseStorage
+      - package: Nuke
+        product: Nuke
+      - package: Nuke
+        product: NukeUI
+    scheme:
+      testTargets:
+        - BirdPokemonTests
+      gatherCoverageData: true
+
+  BirdPokemonTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - BirdPokemonTests
+    dependencies:
+      - target: BirdPokemon
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.birdpokemon.tests
+        GENERATE_INFOPLIST_FILE: YES

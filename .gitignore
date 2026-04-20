@@ -1,0 +1,60 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.swp
+*.lock
+*.hmap
+*.ipa
+*.xcuserstate
+
+# Swift Package Manager
+.swiftpm/
+Packages/
+Package.resolved
+.build/
+
+# CocoaPods (if ever used)
+Pods/
+*.xcworkspace
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Secrets / environment
+Secrets.xcconfig
+.env
+.env.*
+!Secrets.example.xcconfig
+!.env.example
+
+# Firebase
+GoogleService-Info.plist
+GoogleService-Info.Dev.plist
+GoogleService-Info.Prod.plist
+.firebaserc
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+
+# ML training artifacts
+scripts/train-model/data/
+scripts/train-model/output/
+*.mlmodel.zip
+
+# Seed script artifacts
+scripts/seed-ebird/node_modules/
+scripts/seed-ebird/dist/
+scripts/seed-ebird/service-account.json
+
+# Generated Xcode project (XcodeGen users regenerate locally)
+# Keep project.yml but let each dev generate their own xcodeproj
+BirdPokemon.xcodeproj/

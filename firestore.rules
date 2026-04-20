@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid);
+      allow delete: if false;
+    }
+
+    match /sightings/{sightingId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasAll([
+          'userId', 'speciesCode', 'photoURL',
+          'latitude', 'longitude', 'capturedAt'
+        ])
+        && request.resource.data.latitude is number
+        && request.resource.data.longitude is number
+        && request.resource.data.speciesCode is string
+        && request.resource.data.photoURL is string;
+
+      allow update, delete: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    match /speciesCache/{code} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+  }
+}

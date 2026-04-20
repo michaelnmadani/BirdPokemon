@@ -1,0 +1,37 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "sightings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "capturedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sightings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "speciesCode", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "speciesCache",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "regionCodes", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "commonName", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "speciesCache",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "family", "order": "ASCENDING" },
+        { "fieldPath": "commonName", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
