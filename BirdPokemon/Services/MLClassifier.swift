@@ -3,27 +3,38 @@ import UIKit
 import Vision
 import CoreML
 
-/// Wraps the bundled region-specific Core ML image classifier(s).
+/// Wraps the region-specific Core ML image classifier.
 ///
-/// Models are named `BirdClassifier_<REGION>.mlmodel`. V1 ships the AU model
-/// bundled; NZ/GB/US are delivered as a download at runtime from Firebase
-/// Storage (not shown here — see `scripts/train-model/README.md`).
+/// V1 ships the AU model bundled. NZ / GB / US models are fetched from
+/// Firebase Storage on first use of that region — see `ModelRepository`.
 ///
 /// The model emits `VNClassificationObservation` results where `identifier`
 /// is the species' eBird code.
 @MainActor
 final class MLClassifier {
     enum ClassifierError: Error {
-        case modelUnavailable(region: Region)
+        case modelUnavailable(region: Region, underlying: Error?)
         case imageConversionFailed
         case visionFailed(underlying: Error)
     }
 
     private var cachedModels: [Region: VNCoreMLModel] = [:]
     private let topN: Int = 5
+    private let modelRepository: ModelRepository
+
+    init(modelRepository: ModelRepository = .shared) {
+        self.modelRepository = modelRepository
+    }
+
+    /// Ensures the classifier for `region` is loaded (downloading + compiling
+    /// if necessary). Safe to call on app launch or ahead of a capture to
+    /// prime the cache.
+    func prepareModel(region: Region) async throws {
+        _ = try await loadModel(region: region)
+    }
 
     func classify(image: UIImage, region: Region) async throws -> [Prediction] {
-        let model = try loadModel(region: region)
+        let model = try await loadModel(region: region)
         guard let cgImage = image.cgImage else {
             throw ClassifierError.imageConversionFailed
         }
@@ -59,17 +70,17 @@ final class MLClassifier {
         }
     }
 
-    private func loadModel(region: Region) throws -> VNCoreMLModel {
+    private func loadModel(region: Region) async throws -> VNCoreMLModel {
         if let cached = cachedModels[region] { return cached }
-        let resourceName = "BirdClassifier_\(region.rawValue)"
-        guard let url = Bundle.main.url(forResource: resourceName, withExtension: "mlmodelc")
-                ?? Bundle.main.url(forResource: resourceName, withExtension: "mlmodel") else {
-            throw ClassifierError.modelUnavailable(region: region)
+        do {
+            let url = try await modelRepository.compiledModelURL(for: region)
+            let coreML = try MLModel(contentsOf: url)
+            let visionModel = try VNCoreMLModel(for: coreML)
+            cachedModels[region] = visionModel
+            return visionModel
+        } catch {
+            throw ClassifierError.modelUnavailable(region: region, underlying: error)
         }
-        let coreML = try MLModel(contentsOf: url)
-        let visionModel = try VNCoreMLModel(for: coreML)
-        cachedModels[region] = visionModel
-        return visionModel
     }
 }
 

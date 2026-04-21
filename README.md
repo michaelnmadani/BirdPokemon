@@ -6,6 +6,11 @@ A bird-watching app for iPhone that turns spotting birds into a Pokemon-style co
 
 Scaffolded MVP. Regional rollout order: Australia (AU) -> New Zealand (NZ) -> United Kingdom (GB) -> United States (US).
 
+Phase 7 (NZ) code support landed: `MLClassifier` now downloads non-bundled
+region models from Firebase Storage via `ModelRepository` and caches them in
+`Application Support/Models/`. The data pipeline (seed + train + upload) still
+has to be run manually for each new region — see the rollout section below.
+
 See the implementation plan at `/root/.claude/plans/i-want-a-bird-lovely-crane.md` for architecture and phased build order.
 
 ## Requirements
@@ -75,6 +80,41 @@ See the plan file for the full file tree. Key directories:
 - `BirdPokemon/Resources/Seeds` — bundled per-region species seeds
 - `scripts/seed-ebird` — Node admin scripts to populate Firestore `speciesCache`
 - `scripts/train-model` — Create ML training inputs (data not tracked in git)
+
+## Regional rollout (Phase 7+)
+
+Adding a new region (starting with New Zealand) does **not** require an App
+Store resubmission — the app discovers new species via Firestore and pulls the
+classifier model from Firebase Storage on first use.
+
+Run these steps on a Mac with a service account in `scripts/seed-ebird/service-account.json`:
+
+```sh
+cd scripts/seed-ebird
+
+# 1. Seed speciesCache for the new region
+npm run seed -- --region NZ
+
+# 2. Enrich with AVONET size buckets + hand-tagged colors
+npm run enrich -- --region NZ
+
+# 3. Build the training set from iNaturalist (may take hours)
+npm run fetch-images -- --region NZ --perSpecies 300
+```
+
+Then train and upload the model (see `scripts/train-model/README.md`):
+
+```sh
+# Create ML: Image Classifier, train on scripts/seed-ebird/data/training/NZ/
+# Export as BirdClassifier_NZ.mlmodel, then:
+
+firebase storage:upload BirdClassifier_NZ.mlmodel \
+  --destination models/BirdClassifier_NZ.mlmodel
+```
+
+First time a user selects NZ in the region picker, the app will download and
+compile the model (shown via `ClassificationViewModel.preparingModel`). Repeat
+the same flow for `GB` (Phase 8) and `US` (Phase 9).
 
 ## Privacy & licensing
 

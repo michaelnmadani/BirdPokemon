@@ -24,6 +24,23 @@ struct ClassificationView: View {
                     ProgressView("Identifying the bird…")
                         .padding()
 
+                case .preparingModel(let region, let fraction):
+                    VStack(spacing: 8) {
+                        if let fraction {
+                            ProgressView(value: fraction) {
+                                Text("Getting the \(region.displayName) classifier…")
+                            }
+                            .progressViewStyle(.linear)
+                            .frame(maxWidth: 260)
+                        } else {
+                            ProgressView("Getting the \(region.displayName) classifier…")
+                        }
+                        Text("First-time download for this region")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding()
+
                 case .done(let decision, let enriched):
                     resultContent(decision: decision, enriched: enriched)
 
