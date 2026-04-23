@@ -6,10 +6,9 @@ A bird-watching app for iPhone that turns spotting birds into a Pokemon-style co
 
 Scaffolded MVP. Regional rollout order: Australia (AU) -> New Zealand (NZ) -> United Kingdom (GB) -> United States (US).
 
-Phase 7 (NZ) code support landed: `MLClassifier` now downloads non-bundled
-region models from Firebase Storage via `ModelRepository` and caches them in
-`Application Support/Models/`. The data pipeline (seed + train + upload) still
-has to be run manually for each new region — see the rollout section below.
+- **Code:** Phases 0–6 plus multi-region model download (Phase 7 prereq) — `MLClassifier` loads the AU model from the bundle and downloads NZ/GB/US models from Firebase Storage via `ModelRepository`, caching them in `Application Support/Models/`.
+- **Data (AU):** not yet seeded in Firestore. Run the pipeline in **Regional data pipeline** below.
+- **ML (AU):** `BirdClassifier_AU.mlmodel` not yet trained or bundled — the app's auto-ID will return `modelUnavailable` until a model is dropped in `BirdPokemon/Resources/ML/`.
 
 See the implementation plan at `/root/.claude/plans/i-want-a-bird-lovely-crane.md` for architecture and phased build order.
 
@@ -81,40 +80,66 @@ See the plan file for the full file tree. Key directories:
 - `scripts/seed-ebird` — Node admin scripts to populate Firestore `speciesCache`
 - `scripts/train-model` — Create ML training inputs (data not tracked in git)
 
-## Regional rollout (Phase 7+)
+## Regional data pipeline
 
-Adding a new region (starting with New Zealand) does **not** require an App
-Store resubmission — the app discovers new species via Firestore and pulls the
-classifier model from Firebase Storage on first use.
+The same sequence ships each region. Australia (AU) is the first
+implementation; NZ / GB / US follow without an App Store resubmission because
+the app discovers new species via Firestore and pulls the classifier model
+from Firebase Storage on first use.
 
-Run these steps on a Mac with a service account in `scripts/seed-ebird/service-account.json`:
+Prerequisites (one-time per project):
+- **Enable Firestore** on the Firebase project:
+  `https://console.firebase.google.com/project/<projectId>/firestore` → *Create database*
+- Drop a Firebase admin service-account JSON at
+  `scripts/seed-ebird/service-account.json` (gitignored).
+- Create `scripts/seed-ebird/.env` with `EBIRD_API_KEY`, `FIREBASE_PROJECT_ID`,
+  and `GOOGLE_APPLICATION_CREDENTIALS=./service-account.json`.
+- Download AVONET: https://figshare.com/s/b990722d72a26b5bfead →
+  `scripts/seed-ebird/data/AVONET.csv`.
+
+Run on a Mac with unrestricted network (eBird and iNaturalist block some
+sandboxes). Substitute `AU` with `NZ` / `GB` / `US` for later regions.
 
 ```sh
 cd scripts/seed-ebird
+npm install
 
-# 1. Seed speciesCache for the new region
-npm run seed -- --region NZ
+# 0. Verify auth + Firestore reachability
+npm run probe
 
-# 2. Enrich with AVONET size buckets + hand-tagged colors
-npm run enrich -- --region NZ
+# 1. Seed speciesCache from eBird taxonomy (~900 docs for AU)
+npm run seed -- --region AU
 
-# 3. Build the training set from iNaturalist (may take hours)
-npm run fetch-images -- --region NZ --perSpecies 300
+# 2. Generate a starter colors_AU.json from the shipped dictionary
+npm run generate-colors -- --region AU
+
+# 3. Enrich with AVONET size buckets + colors from step 2
+npm run enrich -- --region AU --avonet ./data/AVONET.csv --colors ./data/colors_AU.json
+
+# 4. Export the full region list into the app bundle for offline first-launch
+npm run export-seed -- --region AU
+
+# 5. Build the ML training set from iNaturalist (hours, tens of GB)
+npm run fetch-images -- --region AU --perSpecies 300
 ```
 
-Then train and upload the model (see `scripts/train-model/README.md`):
+Then train and ship the Core ML model (see `scripts/train-model/README.md`):
 
 ```sh
-# Create ML: Image Classifier, train on scripts/seed-ebird/data/training/NZ/
-# Export as BirdClassifier_NZ.mlmodel, then:
+# Create ML: Image Classifier, train on scripts/seed-ebird/data/training/AU/
+# Export as BirdClassifier_AU.mlmodel, then:
 
+# AU ships bundled — drop it into the app bundle:
+cp BirdClassifier_AU.mlmodel BirdPokemon/Resources/ML/
+
+# Subsequent regions upload to Firebase Storage instead (downloaded on demand):
 firebase storage:upload BirdClassifier_NZ.mlmodel \
   --destination models/BirdClassifier_NZ.mlmodel
 ```
 
-First time a user selects NZ in the region picker, the app will download and
-compile the model (shown via `ClassificationViewModel.preparingModel`). Repeat
-the same flow for `GB` (Phase 8) and `US` (Phase 9).
+First time a user selects a non-bundled region in the picker, the app
+downloads and compiles the model (shown via
+`ClassificationViewModel.preparingModel`).
 
 ## Privacy & licensing
 

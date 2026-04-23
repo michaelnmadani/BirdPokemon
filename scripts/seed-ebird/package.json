@@ -5,9 +5,12 @@
   "description": "One-time admin scripts that populate Firestore speciesCache from eBird + AVONET.",
   "type": "module",
   "scripts": {
+    "probe": "tsx probe.ts",
     "seed": "tsx seed.ts",
     "enrich": "tsx enrich.ts",
-    "fetch-images": "tsx fetch-inat-images.ts"
+    "fetch-images": "tsx fetch-inat-images.ts",
+    "generate-colors": "tsx generate-colors.ts",
+    "export-seed": "tsx export-bundled-seed.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

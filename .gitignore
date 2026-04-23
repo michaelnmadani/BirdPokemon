@@ -53,6 +53,7 @@ scripts/train-model/output/
 # Seed script artifacts
 scripts/seed-ebird/node_modules/
 scripts/seed-ebird/dist/
+scripts/seed-ebird/data/
 scripts/seed-ebird/service-account.json
 
 # Generated Xcode project (XcodeGen users regenerate locally)
