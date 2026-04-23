@@ -15,7 +15,6 @@ import "dotenv/config";
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import fetch from "node-fetch";
-import pLimit from "p-limit";
 import { readFileSync } from "fs";
 
 type TaxonomyEntry = {
@@ -84,43 +83,32 @@ async function main() {
   );
   console.log(`Writing ${regional.length} species to speciesCache…`);
 
-  const limiter = pLimit(20);
-  const batch = db.batch();
-  let pending = 0;
+  const writer = db.bulkWriter();
+  for (const entry of regional) {
+    const ref = db.collection("speciesCache").doc(entry.speciesCode);
+    writer.set(
+      ref,
+      {
+        ebirdCode: entry.speciesCode,
+        commonName: entry.comName,
+        scientificName: entry.sciName,
+        order: entry.order,
+        family: entry.familySciName ?? "Unknown",
+        familyCommonName: entry.familyComName ?? null,
+        category: entry.category,
+        sizeCategory: "medium", // enrich.ts overwrites with AVONET-derived value
+        primaryColors: [], // enrich.ts fills from hand-tagged JSON
+        regionCodes: FieldValue.arrayUnion(region),
+        thumbnailURL: null,
+        wikipediaURL: null,
+        ebirdURL: `https://ebird.org/species/${entry.speciesCode}`,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
 
-  await Promise.all(
-    regional.map((entry) =>
-      limiter(async () => {
-        const ref = db.collection("speciesCache").doc(entry.speciesCode);
-        batch.set(
-          ref,
-          {
-            ebirdCode: entry.speciesCode,
-            commonName: entry.comName,
-            scientificName: entry.sciName,
-            order: entry.order,
-            family: entry.familySciName ?? "Unknown",
-            familyCommonName: entry.familyComName ?? null,
-            category: entry.category,
-            sizeCategory: "medium", // enrich.ts overwrites with AVONET-derived value
-            primaryColors: [], // enrich.ts fills from hand-tagged JSON
-            regionCodes: FieldValue.arrayUnion(region),
-            thumbnailURL: null,
-            wikipediaURL: null,
-            ebirdURL: `https://ebird.org/species/${entry.speciesCode}`,
-            updatedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
-        pending += 1;
-        if (pending % 400 === 0) {
-          await batch.commit();
-        }
-      })
-    )
-  );
-
-  await batch.commit();
+  await writer.close();
   console.log("Done.");
 }
 
