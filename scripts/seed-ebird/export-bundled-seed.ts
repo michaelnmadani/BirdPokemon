@@ -57,28 +57,31 @@ type BundledSpecies = {
 
 async function main() {
   console.log(`Exporting region ${region} from project ${process.env.FIREBASE_PROJECT_ID}…`);
+  // No orderBy — avoids requiring a deployed composite index just to export.
+  // Sort in memory after the fetch (region lists are <1000 docs each).
   const snap = await db
     .collection("speciesCache")
     .where("regionCodes", "array-contains", region)
-    .orderBy("commonName")
     .get();
 
-  const bundled: BundledSpecies[] = snap.docs.map((doc) => {
-    const d = doc.data();
-    return {
-      ebirdCode: d.ebirdCode,
-      commonName: d.commonName,
-      scientificName: d.scientificName,
-      order: d.order,
-      family: d.family,
-      familyCommonName: d.familyCommonName ?? null,
-      sizeCategory: d.sizeCategory ?? "medium",
-      primaryColors: d.primaryColors ?? [],
-      regionCodes: d.regionCodes ?? [region],
-      thumbnailURL: d.thumbnailURL ?? null,
-      ebirdURL: d.ebirdURL ?? null,
-    };
-  });
+  const bundled: BundledSpecies[] = snap.docs
+    .map((doc) => {
+      const d = doc.data();
+      return {
+        ebirdCode: d.ebirdCode,
+        commonName: d.commonName,
+        scientificName: d.scientificName,
+        order: d.order,
+        family: d.family,
+        familyCommonName: d.familyCommonName ?? null,
+        sizeCategory: d.sizeCategory ?? "medium",
+        primaryColors: d.primaryColors ?? [],
+        regionCodes: d.regionCodes ?? [region],
+        thumbnailURL: d.thumbnailURL ?? null,
+        ebirdURL: d.ebirdURL ?? null,
+      };
+    })
+    .sort((a, b) => a.commonName.localeCompare(b.commonName));
 
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, JSON.stringify(bundled, null, 2) + "\n");
