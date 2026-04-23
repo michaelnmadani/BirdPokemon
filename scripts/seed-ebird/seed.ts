@@ -16,6 +16,7 @@ import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import fetch from "node-fetch";
 import pLimit from "p-limit";
+import { readFileSync } from "fs";
 
 type TaxonomyEntry = {
   sciName: string;
@@ -47,7 +48,7 @@ console.log(`Seeding region: ${region}`);
 initializeApp({
   credential: cert(
     JSON.parse(
-      require("fs").readFileSync(
+      readFileSync(
         process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "./service-account.json",
         "utf-8"
       )
