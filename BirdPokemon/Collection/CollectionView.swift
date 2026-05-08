@@ -4,6 +4,7 @@ struct CollectionView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel = CollectionViewModel()
     @StateObject private var filterState = FilterState()
+    @State private var showSignOutConfirm = false
 
     private let gridColumns = [GridItem(.adaptive(minimum: 100), spacing: 12)]
 
@@ -30,12 +31,21 @@ struct CollectionView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        ForEach(Region.allCases) { region in
-                            Button {
-                                Task { await appState.updateHomeRegion(region) }
+                        Section("Region") {
+                            ForEach(Region.allCases) { region in
+                                Button {
+                                    Task { await appState.updateHomeRegion(region) }
+                                } label: {
+                                    Label("\(region.flag) \(region.displayName)",
+                                          systemImage: appState.selectedRegion == region ? "checkmark" : "")
+                                }
+                            }
+                        }
+                        Section {
+                            Button(role: .destructive) {
+                                showSignOutConfirm = true
                             } label: {
-                                Label("\(region.flag) \(region.displayName)",
-                                      systemImage: appState.selectedRegion == region ? "checkmark" : "")
+                                Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
                             }
                         }
                     } label: {
@@ -58,6 +68,12 @@ struct CollectionView: View {
                 if viewModel.isLoading && viewModel.regionSpecies.isEmpty {
                     LoadingView(message: "Loading collection…")
                 }
+            }
+            .confirmationDialog("Sign out?", isPresented: $showSignOutConfirm, titleVisibility: .visible) {
+                Button("Sign out", role: .destructive) { appState.signOut() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("You'll need to sign back in to access your collection.")
             }
         }
     }

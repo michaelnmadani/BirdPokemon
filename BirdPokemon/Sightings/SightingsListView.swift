@@ -39,7 +39,7 @@ struct SightingsListView: View {
             .navigationDestination(for: Sighting.self) { sighting in
                 SightingDetailView(sighting: sighting)
             }
-            .task {
+            .task(id: appState.currentUser?.uid) {
                 if let uid = appState.currentUser?.uid {
                     viewModel.start(uid: uid)
                 }

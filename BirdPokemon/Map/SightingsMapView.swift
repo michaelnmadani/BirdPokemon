@@ -21,7 +21,7 @@ struct SightingsMapView: View {
                 }
                 .presentationDetents([.medium, .large])
             }
-            .task {
+            .task(id: appState.currentUser?.uid) {
                 if let uid = appState.currentUser?.uid {
                     viewModel.start(uid: uid)
                 }

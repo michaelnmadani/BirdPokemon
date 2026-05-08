@@ -61,6 +61,14 @@ final class AppState: ObservableObject {
         }
     }
 
+    func signOut() {
+        do {
+            try Auth.auth().signOut()
+        } catch {
+            print("AppState: sign out failed — \(error)")
+        }
+    }
+
     func updateHomeRegion(_ region: Region) async {
         guard let uid = currentUser?.uid else { return }
         selectedRegion = region
