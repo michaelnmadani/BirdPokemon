@@ -3,7 +3,7 @@
  * support. Run this whenever you want to refresh the on-device species list.
  *
  * Usage:
- *   npm run generate-bundle -- --region AU [--count 500]
+ *   npm run generate-bundle -- --region AU [--count 200]
  *
  * Requires EBIRD_API_KEY in your .env file (same key as seed.ts).
  *
@@ -80,7 +80,7 @@ function parseArg(name: string): string | undefined {
 }
 
 const region = (parseArg("region") ?? "AU").toUpperCase();
-const count = parseInt(parseArg("count") ?? "500", 10);
+const count = parseInt(parseArg("count") ?? "200", 10);
 
 // AU subregions used for frequency sampling. Add more for non-AU regions.
 const SUBREGIONS: Record<string, string[]> = {
