@@ -25,24 +25,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: scripts/seed-ebird/package-lock.json
 
       - name: Install dependencies
         working-directory: scripts/seed-ebird
-        run: npm ci
+        run: npm install
 
       - name: Fetch thumbnails
         working-directory: scripts/seed-ebird
         run: |
-          ARGS="--region ${{ inputs.region }}"
+          REGION="${{ inputs.region }}"
+          REGION="${REGION:-AU}"
+          ARGS="--region $REGION"
           if [ -n "${{ inputs.limit }}" ]; then
             ARGS="$ARGS --limit ${{ inputs.limit }}"
           fi
@@ -51,18 +49,15 @@ jobs:
 
       - name: Commit updated taxonomy JSON
         run: |
+          REGION="${{ inputs.region }}"
+          REGION="${REGION:-AU}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add BirdPokemon/Resources/Seeds/taxonomy_${{ inputs.region }}.json
+          git add BirdPokemon/Resources/Seeds/taxonomy_${REGION}.json
           if git diff --staged --quiet; then
             echo "No thumbnail changes to commit."
           else
-            CHANGED=$(git diff --staged --stat | grep 'taxonomy' | head -1)
-            git commit -m "Add iNaturalist thumbnails for ${{ inputs.region }} species
-
-$CHANGED
-
-https://claude.ai/code/session_01SJm96kdv8NuPDwvKv1svyE"
+            git commit -m "Add iNaturalist thumbnails for ${REGION} species"
             git push
             echo "Pushed updated taxonomy JSON."
           fi
