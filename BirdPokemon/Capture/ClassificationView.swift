@@ -8,6 +8,7 @@ struct ClassificationView: View {
 
     @StateObject private var viewModel = ClassificationViewModel()
     @State private var confirmPrediction: Prediction?
+    @State private var forceAmbiguous = false
 
     var body: some View {
         ScrollView {
@@ -25,7 +26,8 @@ struct ClassificationView: View {
                         .padding()
 
                 case .done(let decision, let enriched):
-                    resultContent(decision: decision, enriched: enriched)
+                    resultContent(decision: forceAmbiguous ? .ambiguous(top: enriched) : decision,
+                                  enriched: enriched)
 
                 case .failed(let message):
                     VStack(spacing: 12) {
@@ -91,9 +93,7 @@ struct ClassificationView: View {
                 .padding(.horizontal)
 
                 Button("It's a different bird") {
-                    // Show the full top-5 picker by swapping to ambiguous rendering
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
-                                                    to: nil, from: nil, for: nil)
+                    forceAmbiguous = true
                 }
                 .font(.footnote)
             }

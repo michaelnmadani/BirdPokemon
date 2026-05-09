@@ -7,7 +7,9 @@
   "scripts": {
     "seed": "tsx seed.ts",
     "enrich": "tsx enrich.ts",
-    "fetch-images": "tsx fetch-inat-images.ts"
+    "fetch-images": "tsx fetch-inat-images.ts",
+    "generate-bundle": "tsx generate-bundle.ts",
+    "fetch-thumbnails": "tsx fetch-thumbnails.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
