@@ -1,104 +1,78 @@
 /**
- * Enrich speciesCache with:
- *   - sizeCategory bucketed from AVONET body length (CC-BY-4.0).
- *   - primaryColors from a hand-tagged JSON file.
+ * Suggest size categories from AVONET morphology (CC BY 4.0) and apply
+ * hand-tagged colours, writing into the bundled taxonomy JSON.
  *
  * Usage:
- *   npm run enrich -- --region AU --avonet ./data/AVONET.csv --colors ./data/colors_AU.json
+ *   npm run enrich -- --region AU --avonet ./data/AVONET_eBird.csv [--colors ./data/colors_AU.json] [--write]
+ *
+ * Export the "AVONET2_eBird" sheet of the AVONET supplement as CSV — its
+ * `Species2` names follow the eBird taxonomy, so they match our records.
+ *
+ * Body length isn't in AVONET, so it's estimated as wing + tail + beak
+ * length, which lands within ~10% of field-guide lengths for most birds.
+ * Without --write the script only reports what would change; existing
+ * hand-set sizes are kept unless they differ by more than one bucket.
  */
-import "dotenv/config";
-import { initializeApp, cert } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
+import { parseCsv } from "./lib/csv.ts";
+import { SIZES, bucketSize, hasFlag, normalizeColor, parseArg, readBundle, writeBundle, type BirdColor } from "./lib/bundle.ts";
 
-function parseArg(name: string): string | undefined {
-  const idx = process.argv.indexOf(`--${name}`);
-  return idx >= 0 ? process.argv[idx + 1] : undefined;
-}
-
-const region = parseArg("region") ?? "AU";
+const region = (parseArg("region") ?? "AU").toUpperCase();
 const avonetPath = parseArg("avonet");
 const colorsPath = parseArg("colors");
+const write = hasFlag("write");
 
-if (!avonetPath || !colorsPath) {
-  console.error("Usage: --region AU --avonet AVONET.csv --colors colors_AU.json");
+if (!avonetPath && !colorsPath) {
+  console.error("Usage: --region AU --avonet AVONET_eBird.csv [--colors colors_AU.json] [--write]");
   process.exit(1);
 }
 
-initializeApp({
-  credential: cert(
-    JSON.parse(
-      readFileSync(
-        process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "./service-account.json",
-        "utf-8"
-      )
-    )
-  ),
-  projectId: process.env.FIREBASE_PROJECT_ID,
-});
+function estimatedLengths(csv: string): Map<string, number> {
+  const [header, ...rows] = parseCsv(csv);
+  const col = (name: string) => header.findIndex((h) => h.trim() === name);
+  const nameCol = col("Species2") >= 0 ? col("Species2") : col("Species1");
+  const wing = col("Wing.Length"), tail = col("Tail.Length"), beak = col("Beak.Length_Culmen");
+  if (nameCol < 0 || wing < 0) throw new Error("AVONET CSV needs Species2 (or Species1) and Wing.Length columns");
 
-const db = getFirestore();
-
-function bucket(lengthCm: number | null): string {
-  if (lengthCm == null) return "medium";
-  if (lengthCm < 10) return "tiny";
-  if (lengthCm < 20) return "small";
-  if (lengthCm < 35) return "medium";
-  if (lengthCm < 60) return "large";
-  return "huge";
-}
-
-function parseAvonetLengths(csv: string): Record<string, number> {
-  const lines = csv.split(/\r?\n/).filter(Boolean);
-  const header = lines[0].split(",");
-  const sciCol = header.indexOf("Species1");
-  const lengthCol = header.indexOf("Wing.Length");
-  if (sciCol < 0 || lengthCol < 0) {
-    throw new Error("AVONET CSV missing Species1 or Wing.Length columns");
-  }
-  const out: Record<string, number> = {};
-  for (const line of lines.slice(1)) {
-    const cols = line.split(",");
-    const sci = cols[sciCol]?.trim();
-    const mm = parseFloat(cols[lengthCol]);
-    if (sci && Number.isFinite(mm)) {
-      // Wing length in mm; body length approximation is ~2x wing length.
-      out[sci] = (mm * 2) / 10;
-    }
+  const out = new Map<string, number>();
+  for (const r of rows) {
+    const w = parseFloat(r[wing]);
+    if (!Number.isFinite(w)) continue;
+    const t = tail >= 0 ? parseFloat(r[tail]) : NaN;
+    const b = beak >= 0 ? parseFloat(r[beak]) : NaN;
+    const mm = Number.isFinite(t) ? w + t + (Number.isFinite(b) ? b : 0) : w * 2;
+    out.set(r[nameCol].trim(), mm / 10);
   }
   return out;
 }
 
-async function main() {
-  const avonet = parseAvonetLengths(readFileSync(avonetPath!, "utf-8"));
-  const colors: Record<string, string[]> = JSON.parse(readFileSync(colorsPath!, "utf-8"));
+function main() {
+  const species = readBundle(region);
+  const lengths = avonetPath ? estimatedLengths(readFileSync(avonetPath, "utf-8")) : new Map<string, number>();
+  const colors: Record<string, string[]> = colorsPath ? JSON.parse(readFileSync(colorsPath, "utf-8")) : {};
 
-  const snap = await db
-    .collection("speciesCache")
-    .where("regionCodes", "array-contains", region)
-    .get();
-
-  console.log(`Enriching ${snap.size} species for ${region}…`);
-  const writer = db.bulkWriter();
-  for (const doc of snap.docs) {
-    const data = doc.data();
-    const sci = data.scientificName as string;
-    const length = avonet[sci] ?? null;
-    writer.set(
-      doc.ref,
-      {
-        sizeCategory: bucket(length),
-        primaryColors: colors[data.ebirdCode] ?? data.primaryColors ?? [],
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+  let sizeChanges = 0, colorChanges = 0, unmatched = 0;
+  for (const s of species) {
+    if (avonetPath) {
+      const suggested = bucketSize(lengths.get(s.scientificName));
+      if (!suggested) {
+        unmatched++;
+      } else if (suggested !== s.sizeCategory) {
+        const gap = Math.abs(SIZES.indexOf(suggested) - SIZES.indexOf(s.sizeCategory));
+        console.log(`${s.ebirdCode.padEnd(8)} ${s.sizeCategory} -> ${suggested}${gap > 1 ? "" : " (kept: within one bucket)"}  ${s.commonName}`);
+        if (gap > 1) { s.sizeCategory = suggested; sizeChanges++; }
+      }
+    }
+    const tagged = colors[s.ebirdCode];
+    if (tagged) {
+      const next = [...new Set(tagged.map(normalizeColor).filter((c): c is BirdColor => c !== null))];
+      if (next.join() !== s.primaryColors.join()) { s.primaryColors = next; colorChanges++; }
+    }
   }
-  await writer.close();
-  console.log("Done.");
+
+  console.log(`\n${sizeChanges} size change(s), ${colorChanges} colour change(s), ${unmatched} species not in AVONET.`);
+  if (write) console.log(`Wrote ${writeBundle(region, species)}`);
+  else console.log("Dry run — pass --write to save.");
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main();

@@ -1,0 +1,21 @@
+{
+  "name": "down-under-bird-collector-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline-capable web version of Down Under Bird Collector for testing on any phone or computer.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/build.mjs && node scripts/serve.mjs",
+    "serve": "node scripts/serve.mjs",
+    "test": "node --test tests/unit/*.test.js",
+    "e2e": "node scripts/build.mjs && node tests/e2e.mjs"
+  },
+  "devDependencies": {
+    "leaflet": "1.9.4",
+    "playwright": "1.56.1"
+  }
+}

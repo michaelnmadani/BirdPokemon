@@ -1,126 +1,52 @@
 /**
- * Seed `speciesCache` in Firestore for one region at a time.
+ * Mirror a bundled taxonomy file into Firestore `speciesCache`.
+ *
+ * Only needed if you turn on cloud sync and want species data server-side
+ * (e.g. for a future web dashboard). The apps themselves read the bundled
+ * JSON and never depend on this collection.
  *
  * Usage:
- *   npm run seed -- --region AU
+ *   npm run seed -- --region AU [--dry-run]
  *
- * What it does:
- *   1. Pulls the eBird taxonomy (full global list).
- *   2. Pulls the species list for the requested region.
- *   3. Intersects them and writes one doc per species to Firestore.
- *
- * Size + colour enrichment lives in enrich.ts and should be run afterwards.
+ * Requires GOOGLE_APPLICATION_CREDENTIALS (service-account JSON path) and
+ * FIREBASE_PROJECT_ID in .env.
  */
 import "dotenv/config";
+import { readFileSync } from "node:fs";
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import fetch from "node-fetch";
-import pLimit from "p-limit";
+import { hasFlag, parseArg, readBundle } from "./lib/bundle.ts";
 
-type TaxonomyEntry = {
-  sciName: string;
-  comName: string;
-  speciesCode: string;
-  category: string;
-  order: string;
-  familyCode?: string;
-  familySciName?: string;
-  familyComName?: string;
-};
-
-const EBIRD_BASE = "https://api.ebird.org/v2";
-const apiKey = process.env.EBIRD_API_KEY;
-if (!apiKey) {
-  console.error("Missing EBIRD_API_KEY in .env");
-  process.exit(1);
-}
-
-const args = Object.fromEntries(
-  process.argv
-    .slice(2)
-    .map((arg, index, all) => [arg.replace(/^--/, ""), all[index + 1]])
-    .filter(([k]) => k.startsWith("region"))
-);
-const region = args.region ?? "AU";
-console.log(`Seeding region: ${region}`);
-
-initializeApp({
-  credential: cert(
-    JSON.parse(
-      require("fs").readFileSync(
-        process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "./service-account.json",
-        "utf-8"
-      )
-    )
-  ),
-  projectId: process.env.FIREBASE_PROJECT_ID,
-});
-
-const db = getFirestore();
-
-async function ebirdGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${EBIRD_BASE}${path}`, {
-    headers: { "X-eBirdApiToken": apiKey! },
-  });
-  if (!response.ok) {
-    throw new Error(`eBird ${response.status}: ${await response.text()}`);
-  }
-  return (await response.json()) as T;
-}
+const region = (parseArg("region") ?? "AU").toUpperCase();
+const dryRun = hasFlag("dry-run");
 
 async function main() {
-  console.log("Fetching global taxonomy…");
-  const taxonomy = await ebirdGet<TaxonomyEntry[]>("/ref/taxonomy/ebird?fmt=json&locale=en");
-  console.log(`Taxonomy has ${taxonomy.length} entries.`);
+  const species = readBundle(region);
+  console.log(`${species.length} ${region} species in the bundle.`);
+  if (dryRun) {
+    console.log("DRY RUN — not writing to Firestore.");
+    return;
+  }
 
-  console.log(`Fetching species list for ${region}…`);
-  const regionCodes = await ebirdGet<string[]>(`/product/spplist/${region}`);
-  console.log(`Region has ${regionCodes.length} species.`);
+  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "./service-account.json";
+  initializeApp({
+    credential: cert(JSON.parse(readFileSync(credentialsPath, "utf-8"))),
+    projectId: process.env.FIREBASE_PROJECT_ID,
+  });
+  const db = getFirestore();
 
-  const set = new Set(regionCodes);
-  const regional = taxonomy.filter(
-    (t) => set.has(t.speciesCode) && t.category === "species"
-  );
-  console.log(`Writing ${regional.length} species to speciesCache…`);
-
-  const limiter = pLimit(20);
-  const batch = db.batch();
-  let pending = 0;
-
-  await Promise.all(
-    regional.map((entry) =>
-      limiter(async () => {
-        const ref = db.collection("speciesCache").doc(entry.speciesCode);
-        batch.set(
-          ref,
-          {
-            ebirdCode: entry.speciesCode,
-            commonName: entry.comName,
-            scientificName: entry.sciName,
-            order: entry.order,
-            family: entry.familySciName ?? "Unknown",
-            familyCommonName: entry.familyComName ?? null,
-            category: entry.category,
-            sizeCategory: "medium", // enrich.ts overwrites with AVONET-derived value
-            primaryColors: [], // enrich.ts fills from hand-tagged JSON
-            regionCodes: FieldValue.arrayUnion(region),
-            thumbnailURL: null,
-            wikipediaURL: null,
-            ebirdURL: `https://ebird.org/species/${entry.speciesCode}`,
-            updatedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
-        pending += 1;
-        if (pending % 400 === 0) {
-          await batch.commit();
-        }
-      })
-    )
-  );
-
-  await batch.commit();
-  console.log("Done.");
+  // BulkWriter batches, retries and throttles on its own — no 500-write limit.
+  const writer = db.bulkWriter();
+  for (const s of species) {
+    const { regionCodes, ...rest } = s;
+    writer.set(
+      db.collection("speciesCache").doc(s.ebirdCode),
+      { ...rest, regionCodes: FieldValue.arrayUnion(...regionCodes), updatedAt: FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+  }
+  await writer.close();
+  console.log(`Wrote ${species.length} documents to speciesCache.`);
 }
 
 main().catch((err) => {

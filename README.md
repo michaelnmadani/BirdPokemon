@@ -1,89 +1,90 @@
-# BirdPokemon
+# Down Under Bird Collector
 
-A bird-watching app for iPhone that turns spotting birds into a Pokemon-style collection game. Photograph a bird, get it auto-identified on-device, and save the sighting to your personal collection with its GPS location.
+An iPhone app that turns birdwatching into a collection game. Photograph a
+bird, identify it, and it joins your collection with the date and place you
+saw it. Fill the album one species at a time — 500 Australian birds to find.
 
-## Status
+- **Collection** — every species as a card; the ones you haven't found stay
+  hidden until you photograph them.
+- **Field Guide** — search and filter all 500 species by size, colour and
+  family, with photos credited to their iNaturalist photographers.
+- **Capture** — camera with telephoto zoom (or pick from your photo
+  library), choose or confirm the species, and save. Location comes from
+  GPS or from the photo itself.
+- **Sightings & Map** — your log, with every sighting pinned on a map.
 
-Scaffolded MVP. Regional rollout order: Australia (AU) -> New Zealand (NZ) -> United Kingdom (GB) -> United States (US).
+Everything works offline and stays on the phone. No account needed.
 
-See the implementation plan at `/root/.claude/plans/i-want-a-bird-lovely-crane.md` for architecture and phased build order.
+There's also a **web version** in [`web/`](web/) for trying the app on any
+phone or computer before the iOS build is on your device.
 
-## Requirements
+## Quick start
 
-- macOS with Xcode 15.3 or later
-- iOS 17.0+ target device (or simulator, with Photo Library fallback for camera)
-- Apple Developer account (for Sign in with Apple + device deployment)
-- Firebase project (Auth + Firestore + Storage)
-- eBird API key (free for non-commercial use: https://ebird.org/api/keygen)
-- Homebrew packages: `xcodegen`, `firebase-cli`, `node` (for seed scripts)
+### iOS app (needs a Mac with Xcode 16.3 or later)
 
-## First-time setup
+```sh
+brew install xcodegen
+xcodegen generate
+open DownUnderBirdCollector.xcodeproj
+```
 
-1. **Install tools**
-   ```sh
-   brew install xcodegen firebase-cli node
-   ```
+Pick an iPhone simulator and press ⌘R. To run on your own iPhone, copy
+`Secrets.example.xcconfig` to `Secrets.xcconfig`, put in your Apple team ID,
+regenerate, and select your phone. Shipping to TestFlight / the App Store is
+covered step by step in **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
-2. **Create the Xcode project**
-   ```sh
-   xcodegen generate
-   open BirdPokemon.xcodeproj
-   ```
+### Web version (any computer with Node 20+)
 
-3. **Add your secrets**
-   ```sh
-   cp Secrets.example.xcconfig Secrets.xcconfig
-   # edit Secrets.xcconfig and paste your EBIRD_API_KEY
-   ```
+```sh
+cd web
+npm install
+npm start          # → http://localhost:5173
+```
 
-4. **Add Firebase config**
-   - Create a Firebase project at https://console.firebase.google.com
-   - Add an iOS app with bundle id matching `project.yml` (`com.example.birdpokemon`)
-   - Download `GoogleService-Info.plist` and place it at `BirdPokemon/Supporting/GoogleService-Info.plist`
-   - Enable Auth (Apple, Email/Password), Firestore, and Storage in the console
-
-5. **Deploy security rules**
-   ```sh
-   firebase login
-   firebase use --add  # pick your project
-   firebase deploy --only firestore:rules,storage:rules,firestore:indexes
-   ```
-
-6. **Seed the species catalog (Australia first)**
-   ```sh
-   cd scripts/seed-ebird
-   npm install
-   cp .env.example .env   # add EBIRD_API_KEY and path to firebase service-account.json
-   npm run seed -- --region AU
-   ```
-
-7. **Build & run**
-   - Open `BirdPokemon.xcodeproj`
-   - Select an iPhone simulator or physical device
-   - Cmd+R
+Open it, browse, and "capture" birds with any photo. After the first load it
+works with no connection at all. See [`web/README.md`](web/README.md) for
+testing on a phone.
 
 ## Project layout
 
-See the plan file for the full file tree. Key directories:
+| Path | What's there |
+| --- | --- |
+| `DownUnderBirdCollector/` | SwiftUI app (iOS 17+) |
+| `DownUnderBirdCollector/Resources/Seeds/` | Bundled species data — the single source of truth for both apps |
+| `DownUnderBirdCollectorTests/` | Unit tests (catalog decoding, storage, image processing, filters) |
+| `web/` | Offline web app (no framework, no runtime dependencies) |
+| `scripts/seed-ebird/` | Node scripts that maintain the species data |
+| `scripts/train-model/` | Create ML script to train the bird-identification model |
+| `project.yml`, `Config/` | XcodeGen project definition and build settings |
+| `.github/workflows/` | CI for iOS and web, TestFlight upload, photo fetching |
 
-- `BirdPokemon/App` — app entry, delegate, root routing
-- `BirdPokemon/Auth` — Sign in with Apple + email/password flows
-- `BirdPokemon/Capture` — camera, ML classification, sighting confirmation
-- `BirdPokemon/Services` — Firebase, eBird, Core Location, ML wrappers
-- `BirdPokemon/Models` — Codable data models
-- `BirdPokemon/Resources/ML` — bundled `BirdClassifier_AU.mlmodel` (drop in after training)
-- `BirdPokemon/Resources/Seeds` — bundled per-region species seeds
-- `scripts/seed-ebird` — Node admin scripts to populate Firestore `speciesCache`
-- `scripts/train-model` — Create ML training inputs (data not tracked in git)
+## How it fits together
 
-## Privacy & licensing
+- **Species data**: `taxonomy_AU.json` ships inside the app. It's loaded at
+  launch and decoded leniently, so one odd record can never empty the catalog.
+- **Sightings**: saved on the device (Application Support: a JSON index and
+  two JPEGs per sighting, included in iPhone backups). "Collected" is worked
+  out from your sightings, so deleting your only sighting of a species
+  un-collects it.
+- **Identification**: the app uses `BirdClassifier_AU.mlmodel` if one is
+  bundled; until then you choose the species from the field guide. Training
+  a model: [`scripts/train-model/README.md`](scripts/train-model/README.md).
+- **Optional cloud sync**: drop a Firebase `GoogleService-Info.plist` into
+  `DownUnderBirdCollector/Supporting/` and the app switches to sign-in
+  (Apple or email) with sightings synced through Firestore and Storage.
+  Rules are in `firestore.rules` / `storage.rules`.
 
-This app is for **non-commercial use**. Data sources:
+## Tests
 
-- eBird API 2.0 (non-commercial free tier)
-- iNaturalist (CC-BY-NC images for ML training)
-- AVONET (CC-BY-4.0 morphological data for size buckets)
-- GBIF (CC0 / CC-BY occurrence data)
-- Wikipedia / Wikidata (CC-BY-SA descriptions and thumbnails)
+| What | Command | Runs in CI |
+| --- | --- | --- |
+| iOS unit tests | ⌘U in Xcode | `iOS` workflow (also an unsigned Release device build) |
+| Species data | `cd scripts/seed-ebird && npm run validate && npm test` | `iOS` workflow |
+| Web unit + end-to-end | `cd web && npm test && npm run e2e` | `Web` workflow |
 
-GPS coordinates are user-private by default; sightings are only visible to the user who recorded them.
+## Data and licences
+
+Non-commercial use. Species names and taxonomy from eBird (Cornell Lab of
+Ornithology). Species photos from iNaturalist contributors under Creative
+Commons licences, credited in the app. AVONET morphology (CC BY 4.0) for size
+estimates. Map tiles © OpenStreetMap contributors (web version).

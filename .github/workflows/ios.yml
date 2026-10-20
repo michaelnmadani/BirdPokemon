@@ -1,0 +1,137 @@
+name: iOS
+
+on:
+  push:
+    branches: ['**']
+    paths-ignore:
+      - 'web/**'
+      - '**/*.md'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-data:
+    name: Validate species data
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: scripts/seed-ebird/package-lock.json
+      - name: Install
+        working-directory: scripts/seed-ebird
+        run: npm ci
+      - name: Validate bundled taxonomy
+        working-directory: scripts/seed-ebird
+        run: npm run validate && npm test
+      - name: Typecheck data scripts
+        working-directory: scripts/seed-ebird
+        run: npm run typecheck
+
+  build-and-test:
+    name: Build and test (simulator)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select newest Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: .spm
+          key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Pick an iPhone simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          best = None
+          for runtime, devices in json.load(sys.stdin)["devices"].items():
+              if "iOS" not in runtime:
+                  continue
+              version = tuple(int(x) for x in runtime.split("iOS-")[1].split("-"))
+              for d in devices:
+                  if d.get("isAvailable") and d["name"].startswith("iPhone"):
+                      if best is None or version > best[0]:
+                          best = (version, d["udid"], d["name"])
+          print(best[1])
+          print("Using", best[2], best[0], file=sys.stderr)
+          ')
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Build and run unit tests
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild test \
+            -project DownUnderBirdCollector.xcodeproj \
+            -scheme DownUnderBirdCollector \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath build/dd \
+            -clonedSourcePackagesDirPath .spm \
+            -resultBundlePath build/TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee build/test.log | grep -E '(: error:|Test Case .* (passed|failed)|Executed|\*\* TEST)' || true
+          grep -q '\*\* TEST SUCCEEDED \*\*' build/test.log
+
+      - name: Check app bundle contents
+        run: |
+          APP=build/dd/Build/Products/Debug-iphonesimulator/DownUnderBirdCollector.app
+          for f in taxonomy_AU.json PrivacyInfo.xcprivacy Assets.car Info.plist; do
+            test -e "$APP/$f" && echo "found $f" || { echo "::error::$f missing from app bundle"; exit 1; }
+          done
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist"
+
+      - name: Release build for device (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project DownUnderBirdCollector.xcodeproj \
+            -scheme DownUnderBirdCollector \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/dd \
+            -clonedSourcePackagesDirPath .spm \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee build/release.log | grep -E '(: error:|\*\* BUILD)' || true
+          grep -q '\*\* BUILD SUCCEEDED \*\*' build/release.log
+
+      - name: Typecheck the Create ML training script
+        run: xcrun swiftc -typecheck scripts/train-model/train.swift
+
+      - name: Show compiler errors
+        if: failure()
+        run: |
+          cat build/*.log 2>/dev/null | grep -E ': (error|warning: .*isolat)' | sort -u | head -150 || true
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-logs
+          path: |
+            build/*.log
+            build/TestResults.xcresult
+          if-no-files-found: ignore
+          retention-days: 7

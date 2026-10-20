@@ -1,25 +1,30 @@
 {
-  "name": "birdpokemon-seed-ebird",
-  "version": "0.1.0",
+  "name": "down-under-bird-collector-data",
+  "version": "0.2.0",
   "private": true,
-  "description": "One-time admin scripts that populate Firestore speciesCache from eBird + AVONET.",
+  "description": "Admin scripts that build the bundled species taxonomy and mirror it into Firestore.",
   "type": "module",
+  "engines": {
+    "node": ">=20.11"
+  },
   "scripts": {
-    "seed": "tsx seed.ts",
-    "enrich": "tsx enrich.ts",
-    "fetch-images": "tsx fetch-inat-images.ts",
     "generate-bundle": "tsx generate-bundle.ts",
-    "fetch-thumbnails": "tsx fetch-thumbnails.ts"
+    "fetch-thumbnails": "tsx fetch-thumbnails.ts",
+    "enrich": "tsx enrich.ts",
+    "validate": "tsx validate-bundle.ts",
+    "seed": "tsx seed.ts",
+    "fetch-images": "tsx fetch-inat-images.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test lib/lib.test.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
-    "firebase-admin": "^12.1.1",
-    "node-fetch": "^3.3.2",
-    "p-limit": "^5.0.0"
+    "firebase-admin": "^13.0.0",
+    "p-limit": "^6.1.0"
   },
   "devDependencies": {
-    "tsx": "^4.11.2",
-    "typescript": "^5.4.5",
-    "@types/node": "^20.12.12"
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
   }
 }
