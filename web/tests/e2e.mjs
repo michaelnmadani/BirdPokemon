@@ -45,6 +45,11 @@ page.on('console', (msg) => {
 });
 
 const tab = (name) => page.locator('#tabbar').getByRole('link', { name, exact: true });
+// Switch tabs and wait for the new screen, so later lookups can't hit the old one.
+const go = async (name) => {
+  await tab(name).click();
+  await page.locator('h1', { hasText: name === 'Capture' ? /Capture|Which bird|Save sighting/ : name }).waitFor();
+};
 
 const step = async (name, fn) => {
   process.stdout.write(`• ${name} … `);
@@ -61,7 +66,7 @@ try {
   });
 
   await step('Field guide search', async () => {
-    await tab('Field Guide').click();
+    await go('Field Guide');
     await page.getByRole('searchbox').fill('kookaburra');
     await page.waitForFunction(() => document.querySelectorAll('.species-row').length >= 2);
     const names = await page.locator('.species-row strong').allTextContents();
@@ -75,7 +80,7 @@ try {
   });
 
   await step('Capture from library uses the photo location', async () => {
-    await tab('Capture').click();
+    await go('Capture');
     await page.locator('#library-input').setInputFiles(fixture('bird-with-gps.jpg'));
     await page.getByRole('heading', { name: 'Which bird?' }).waitFor();
     await page.getByRole('searchbox').fill('laughing');
@@ -104,11 +109,11 @@ try {
   });
 
   await step('Collection and sightings update', async () => {
-    await tab('Collection').click();
+    await go('Collection');
     await page.getByText(/2 of 500 collected/).waitFor();
     await page.getByRole('tab', { name: 'Collected' }).click();
     assert.equal(await page.locator('.card.collected').count(), 2);
-    await tab('Sightings').click();
+    await go('Sightings');
     await page.getByRole('heading', { name: 'Sightings' }).waitFor();
     assert.equal(await page.locator('.rows .species-row').count(), 2);
   });
@@ -120,7 +125,7 @@ try {
   });
 
   await step('Map pins both sightings', async () => {
-    await tab('Map').click();
+    await go('Map');
     await page.waitForFunction(() => document.querySelectorAll('.bigmap .leaflet-marker-icon').length === 2);
   });
 
@@ -131,21 +136,21 @@ try {
     await context.setOffline(true);
     await page.goto(`${base}#/collection`);
     await page.getByText(/2 of 500 collected/).waitFor();
-    await tab('Field Guide').click();
+    await go('Field Guide');
     await page.getByRole('searchbox').fill('emu');
     await page.locator('.species-row', { hasText: 'Emu' }).first().waitFor();
-    await tab('Map').click();
+    await go('Map');
     await page.locator('.bigmap .leaflet-marker-icon').first().waitFor();
     await context.setOffline(false);
   });
 
   await step('Delete a sighting', async () => {
-    await tab('Sightings').click();
+    await go('Sightings');
     await page.locator('.species-row', { hasText: 'Galah' }).click();
     await page.getByRole('button', { name: 'Delete sighting' }).click();
     await page.locator('dialog').getByRole('button', { name: 'Delete' }).click();
     await page.getByText('1 total').waitFor();
-    await tab('Collection').click();
+    await go('Collection');
     await page.getByText(/1 of 500 collected/).waitFor();
   });
 
