@@ -1,9 +1,9 @@
-// Photo → choose species → confirm → saved. Mirrors the iOS capture flow;
-// the web version always identifies by hand (no on-device model).
+// Photo (or no photo) → choose species → confirm → saved. Mirrors the iOS
+// capture flow; the web version always identifies by hand (no on-device model).
 import { readExif } from '../exif.js';
 import { processPhoto } from '../images.js';
 import { REGIONS, emptyCriteria, matches } from '../model.js';
-import { formatCoord, formatDate, h, toast } from '../ui.js';
+import { formatCoord, formatDate, h, speciesImage, toast } from '../ui.js';
 import { speciesRow } from './guide.js';
 
 function freshState() {
@@ -11,7 +11,7 @@ function freshState() {
     step: 'start',          // 'start' | 'pick' | 'confirm'
     file: null,
     previewURL: null,
-    source: null,           // 'camera' | 'library'
+    source: null,           // 'camera' | 'library' | 'none' (no photo)
     takenAt: null,
     location: { status: 'none' },
     species: null,
@@ -74,14 +74,24 @@ function startStep(app, state, rerender) {
   const libraryInput = h('input.visually-hidden', { type: 'file', accept: 'image/*', id: 'library-input' });
   libraryInput.addEventListener('change', onFile('library'));
 
+  // Seen or heard but not photographed: log it here and now.
+  const withoutPhoto = () => {
+    state.source = 'none';
+    state.takenAt = new Date();
+    state.step = 'pick';
+    locate(state, rerender);
+    rerender();
+  };
+
   return [
     h('header.top', h('h1', 'Capture')),
     h('div.hero-cta',
       h('div.big-icon', { 'aria-hidden': 'true' }, '📷'),
       h('h2', 'Spot a bird?'),
-      h('p.muted', 'Photograph it to add it to your collection.'),
+      h('p.muted', 'Photograph it to add it to your collection — or just log it.'),
       h('label.btn.primary.wide', { for: 'camera-input' }, 'Take photo'), cameraInput,
       h('label.btn.wide', { for: 'library-input' }, 'Choose from photos'), libraryInput,
+      h('button.btn.wide', { type: 'button', onclick: withoutPhoto }, 'Log without a photo'),
       h('p.muted.small', `${have} of ${species.length} ${REGIONS[app.region]?.name ?? ''} species collected`),
     ),
   ];
@@ -117,8 +127,8 @@ function pickStep(app, state, rerender) {
     h('header.top',
       h('button.back', { type: 'button', onclick: () => { reset(app, state); rerender(); } }, 'Discard'),
       h('h1', 'Which bird?')),
-    h('img.preview', { src: state.previewURL, alt: 'Your photo' }),
-    h('p.muted.small', 'Choose the species you photographed.'),
+    state.previewURL ? h('img.preview', { src: state.previewURL, alt: 'Your photo' }) : null,
+    h('p.muted.small', state.previewURL ? 'Choose the species you photographed.' : 'Choose the species you saw or heard.'),
     search,
     list,
   ];
@@ -129,7 +139,19 @@ function pickStep(app, state, rerender) {
 function confirmStep(app, state, rerender) {
   const s = state.species;
   const isNew = !app.store.isCollected(s.ebirdCode);
+  const hasPhoto = Boolean(state.file);
   const takenAt = state.takenAt ?? new Date();
+
+  // Without a photo there's no timestamp to read, so let people adjust it.
+  const when = hasPhoto
+    ? h('span', formatDate(takenAt))
+    : h('input', { type: 'datetime-local', value: toLocalInput(takenAt), max: toLocalInput(new Date()), 'aria-label': 'When' });
+  if (!hasPhoto) {
+    when.addEventListener('change', () => {
+      const picked = new Date(when.value);
+      if (!Number.isNaN(picked.getTime())) state.takenAt = picked;
+    });
+  }
 
   const notes = h('textarea', { rows: 3, placeholder: 'What was the bird doing?', 'aria-label': 'Notes' });
   notes.value = state.notes;
@@ -140,12 +162,12 @@ function confirmStep(app, state, rerender) {
     state.saving = true;
     rerender();
     try {
-      const photo = await processPhoto(state.file);
+      const photo = hasPhoto ? await processPhoto(state.file) : null;
       const loc = state.location.status === 'found' ? state.location : null;
       await app.store.add({
         species: s,
         photo,
-        capturedAt: takenAt,
+        capturedAt: state.takenAt ?? takenAt,
         coordinate: loc?.coordinate ?? null,
         accuracy: loc?.accuracy ?? null,
         locationSource: loc?.source ?? null,
@@ -169,12 +191,15 @@ function confirmStep(app, state, rerender) {
     h('header.top',
       h('button.back', { type: 'button', onclick: () => { state.step = 'pick'; rerender(); } }, '‹ Species'),
       h('h1', 'Save sighting')),
-    h('img.preview', { src: state.previewURL, alt: 'Your photo' }),
+    hasPhoto
+      ? h('img.preview', { src: state.previewURL, alt: 'Your photo' })
+      : speciesImage(s.thumbnailURL, s.commonName, 'preview-species'),
     h('div.form',
       h('div.field', h('span.label', 'Species'),
         h('strong', s.commonName), h('em.muted.small', s.scientificName),
         h(`span.pill${isNew ? '.accent' : ''}`, isNew ? '✨ New for your collection!' : 'Already in your collection')),
-      h('div.field', h('span.label', 'When'), h('span', formatDate(takenAt))),
+      h('label.field', h('span.label', 'When'), when),
+      hasPhoto ? null : h('p.muted.small', 'Logged without a photo — the field guide picture stands in for it.'),
       h('div.field', h('span.label', 'Where'), locationBlock(state, rerender),
         h('span.muted.small', 'Locations are only stored with your sightings, in this browser.')),
       h('label.field', h('span.label', 'Notes'), notes),
@@ -204,13 +229,18 @@ function locationBlock(state, rerender) {
 }
 
 function locate(state, rerender) {
+  // Location only shows on the Save step; redrawing the species picker
+  // mid-typing would drop keyboard focus.
+  const refresh = () => {
+    if (state.step === 'confirm') rerender();
+  };
   if (!('geolocation' in navigator)) {
     state.location = { status: 'error', message: 'Location isn’t available in this browser.' };
-    rerender();
+    refresh();
     return;
   }
   state.location = { status: 'locating' };
-  rerender();
+  refresh();
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       state.location = {
@@ -219,14 +249,14 @@ function locate(state, rerender) {
         accuracy: pos.coords.accuracy,
         source: 'device',
       };
-      rerender();
+      refresh();
     },
     (err) => {
       state.location = {
         status: 'error',
         message: err.code === err.PERMISSION_DENIED ? 'Location permission is off.' : 'Couldn’t get a location fix.',
       };
-      rerender();
+      refresh();
     },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
   );
@@ -241,4 +271,10 @@ function celebrate({ title, message }) {
   dialog.addEventListener('close', () => dialog.remove());
   document.body.append(dialog);
   dialog.showModal();
+}
+
+/** Date -> "YYYY-MM-DDTHH:MM" in local time, for <input type="datetime-local">. */
+function toLocalInput(date) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }

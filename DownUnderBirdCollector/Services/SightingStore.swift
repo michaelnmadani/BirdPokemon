@@ -7,7 +7,7 @@ protocol SightingBackend: AnyObject {
     /// Begin delivering the full sightings list, now and on every change.
     func start(onUpdate: @escaping @MainActor (Result<[Sighting], Error>) -> Void)
     func stop()
-    func add(_ draft: SightingDraft, photo: ProcessedPhoto) async throws -> Sighting
+    func add(_ draft: SightingDraft, photo: ProcessedPhoto?) async throws -> Sighting
     func delete(_ sighting: Sighting) async throws
     func photoURL(for sighting: Sighting) -> URL?
     func thumbnailURL(for sighting: Sighting) -> URL?
@@ -71,10 +71,12 @@ final class SightingStore: ObservableObject {
     @discardableResult
     func add(_ draft: SightingDraft) async throws -> Sighting {
         guard let backend else { throw StoreError.notReady }
-        let image = draft.photo.image
-        let processed = try await Task.detached(priority: .userInitiated) {
-            try ImageProcessing.process(image)
-        }.value
+        var processed: ProcessedPhoto?
+        if let image = draft.photo?.image {
+            processed = try await Task.detached(priority: .userInitiated) {
+                try ImageProcessing.process(image)
+            }.value
+        }
         do {
             return try await backend.add(draft, photo: processed)
         } catch {

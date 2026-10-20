@@ -43,13 +43,15 @@ final class LocalSightingBackend: SightingBackend {
         onUpdate = nil
     }
 
-    func add(_ draft: SightingDraft, photo: ProcessedPhoto) async throws -> Sighting {
+    func add(_ draft: SightingDraft, photo: ProcessedPhoto?) async throws -> Sighting {
         let id = UUID().uuidString
-        let photoFile = "\(id).jpg"
-        let thumbnailFile = "\(id)_thumb.jpg"
-        try fileManager.createDirectory(at: photosDirectory, withIntermediateDirectories: true)
-        try photo.full.write(to: photosDirectory.appendingPathComponent(photoFile), options: .atomic)
-        try photo.thumbnail.write(to: photosDirectory.appendingPathComponent(thumbnailFile), options: .atomic)
+        let photoFile = photo == nil ? nil : "\(id).jpg"
+        let thumbnailFile = photo == nil ? nil : "\(id)_thumb.jpg"
+        if let photo, let photoFile, let thumbnailFile {
+            try fileManager.createDirectory(at: photosDirectory, withIntermediateDirectories: true)
+            try photo.full.write(to: photosDirectory.appendingPathComponent(photoFile), options: .atomic)
+            try photo.thumbnail.write(to: photosDirectory.appendingPathComponent(thumbnailFile), options: .atomic)
+        }
 
         let sighting = Sighting(
             id: id,

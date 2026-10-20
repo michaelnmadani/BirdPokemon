@@ -49,7 +49,8 @@ struct Sighting: Identifiable, Codable, Hashable {
 /// Everything needed to create a sighting; the store assigns ids and files.
 struct SightingDraft {
     var species: Species
-    var photo: CapturedPhoto
+    /// nil when the bird was logged without a photo (seen or heard).
+    var photo: CapturedPhoto?
     var capturedAt: Date
     var coordinate: CLLocationCoordinate2D?
     var locationAccuracy: Double?

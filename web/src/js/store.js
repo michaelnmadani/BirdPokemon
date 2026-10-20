@@ -64,7 +64,7 @@ export class SightingStore extends EventTarget {
     return this.sightings.find((s) => s.id === id) ?? null;
   }
 
-  /** draft: { species, photo: {full, thumb}, capturedAt: Date, coordinate, accuracy, locationSource, notes } */
+  /** draft: { species, photo: {full, thumb} | null, capturedAt: Date, coordinate, accuracy, locationSource, notes } */
   async add(draft) {
     const id = crypto.randomUUID();
     const sighting = {
@@ -83,10 +83,11 @@ export class SightingStore extends EventTarget {
       mlTopPrediction: null,
       mlTopConfidence: null,
       userOverrode: false,
+      hasPhoto: Boolean(draft.photo),
     };
     const tx = this.db.transaction(['sightings', 'photos'], 'readwrite');
     tx.objectStore('sightings').put(sighting);
-    tx.objectStore('photos').put({ id, full: draft.photo.full, thumb: draft.photo.thumb });
+    if (draft.photo) tx.objectStore('photos').put({ id, full: draft.photo.full, thumb: draft.photo.thumb });
     await done(tx);
     this.#set([...this.sightings, sighting]);
     return sighting;

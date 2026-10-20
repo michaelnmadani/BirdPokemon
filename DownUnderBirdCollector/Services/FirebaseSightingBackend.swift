@@ -41,21 +41,23 @@ final class FirebaseSightingBackend: SightingBackend {
         listener = nil
     }
 
-    func add(_ draft: SightingDraft, photo: ProcessedPhoto) async throws -> Sighting {
+    func add(_ draft: SightingDraft, photo: ProcessedPhoto?) async throws -> Sighting {
         let document = collection.document()
         let id = document.documentID
-        let photoPath = "users/\(uid)/sightings/\(id).jpg"
-        let thumbnailPath = "users/\(uid)/sightings/\(id)_thumb.jpg"
         let storage = Storage.storage()
 
-        let metadata = StorageMetadata()
-        metadata.contentType = "image/jpeg"
-        let photoRef = storage.reference(withPath: photoPath)
-        let thumbnailRef = storage.reference(withPath: thumbnailPath)
-        _ = try await photoRef.putDataAsync(photo.full, metadata: metadata)
-        _ = try await thumbnailRef.putDataAsync(photo.thumbnail, metadata: metadata)
-        let photoURL = try await photoRef.downloadURL()
-        let thumbnailURL = try await thumbnailRef.downloadURL()
+        var uploaded: (photo: StorageReference, thumbnail: StorageReference, photoURL: URL, thumbnailURL: URL)?
+        if let photo {
+            let metadata = StorageMetadata()
+            metadata.contentType = "image/jpeg"
+            let photoRef = storage.reference(withPath: "users/\(uid)/sightings/\(id).jpg")
+            let thumbnailRef = storage.reference(withPath: "users/\(uid)/sightings/\(id)_thumb.jpg")
+            _ = try await photoRef.putDataAsync(photo.full, metadata: metadata)
+            _ = try await thumbnailRef.putDataAsync(photo.thumbnail, metadata: metadata)
+            let photoURL = try await photoRef.downloadURL()
+            let thumbnailURL = try await thumbnailRef.downloadURL()
+            uploaded = (photoRef, thumbnailRef, photoURL, thumbnailURL)
+        }
 
         let sighting = Sighting(
             id: id,
@@ -73,17 +75,17 @@ final class FirebaseSightingBackend: SightingBackend {
             mlTopPrediction: draft.mlTopPrediction?.speciesCode,
             mlTopConfidence: draft.mlTopPrediction?.confidence,
             userOverrode: draft.userOverrode,
-            photoURL: photoURL.absoluteString,
-            thumbnailURL: thumbnailURL.absoluteString,
-            photoStoragePath: photoPath,
-            thumbnailStoragePath: thumbnailPath
+            photoURL: uploaded?.photoURL.absoluteString,
+            thumbnailURL: uploaded?.thumbnailURL.absoluteString,
+            photoStoragePath: uploaded?.photo.fullPath,
+            thumbnailStoragePath: uploaded?.thumbnail.fullPath
         )
 
         do {
             try document.setData(from: sighting)
         } catch {
-            try? await photoRef.delete()
-            try? await thumbnailRef.delete()
+            try? await uploaded?.photo.delete()
+            try? await uploaded?.thumbnail.delete()
             throw error
         }
         return sighting

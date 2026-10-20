@@ -154,6 +154,26 @@ try {
     await page.getByText(/1 of 500 collected/).waitFor();
   });
 
+  await step('Log a sighting without a photo at the current location', async () => {
+    await go('Capture');
+    await page.getByRole('button', { name: 'Log without a photo' }).click();
+    await page.getByText('Choose the species you saw or heard.').waitFor();
+    await page.getByRole('searchbox').fill('emu');
+    await page.locator('.species-row', { hasText: 'Emu' }).first().click();
+    await page.getByText('-33.86880, 151.20930').waitFor();
+    await page.getByText('Logged without a photo').waitFor();
+    assert.ok(await page.getByLabel('When').inputValue());
+    await page.getByRole('button', { name: 'Save sighting' }).click();
+    await page.getByText('New species collected!').waitFor();
+    await page.getByRole('button', { name: 'Nice!' }).click();
+    await go('Sightings');
+    await page.locator('.species-row', { hasText: 'Emu' }).click();
+    await page.getByText('Logged without a photo — field guide picture shown.').waitFor();
+    await page.locator('.minimap .leaflet-marker-icon').waitFor();
+    await go('Collection');
+    await page.getByText(/2 of 500 collected/).waitFor();
+  });
+
   await step('Settings reports offline readiness', async () => {
     await page.getByRole('link', { name: 'Settings' }).click();
     await page.getByText('Ready to use offline').waitFor();

@@ -4,10 +4,12 @@ struct SightingRowView: View {
     let sighting: Sighting
 
     @EnvironmentObject private var store: SightingStore
+    @EnvironmentObject private var catalog: SpeciesCatalog
 
     var body: some View {
         HStack(spacing: 12) {
-            AsyncRemoteImage(url: store.thumbnailURL(for: sighting))
+            // Sightings logged without a photo show the field guide picture.
+            AsyncRemoteImage(url: store.thumbnailURL(for: sighting) ?? catalog.species(code: sighting.speciesCode)?.thumbnail)
                 .frame(width: 64, height: 64)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 

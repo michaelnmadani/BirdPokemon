@@ -1,8 +1,9 @@
 import SwiftUI
 import PhotosUI
 
-/// Photo → identify (or choose) → confirm → saved. Navigation is driven by an
-/// explicit path so finishing a save can reset the whole flow in one step.
+/// Photo → identify (or choose) → confirm → saved, or — for a bird seen or
+/// heard but not photographed — choose → confirm → saved. Navigation is driven
+/// by an explicit path so finishing a save can reset the whole flow in one step.
 struct CaptureFlowView: View {
     private enum Route: Hashable {
         case pickSpecies
@@ -74,7 +75,8 @@ struct CaptureFlowView: View {
                 path.append(.confirm(speciesCode: species.ebirdCode, prediction: .manual(species)))
             }
         case .confirm(let code, let prediction):
-            if let photo, let species = catalog.species(code: code) {
+            // `photo` is nil when logging without one.
+            if let species = catalog.species(code: code) {
                 SightingConfirmView(
                     photo: photo,
                     species: species,
@@ -105,7 +107,7 @@ struct CaptureFlowView: View {
             VStack(spacing: 8) {
                 Text("Spot a bird?")
                     .font(.title.bold())
-                Text("Photograph it to add it to your collection.")
+                Text("Photograph it to add it to your collection — or just log it.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -124,6 +126,15 @@ struct CaptureFlowView: View {
 
                 PhotosPicker(selection: $pickerItem, matching: .images, photoLibrary: .shared()) {
                     Label("Pick from library", systemImage: "photo.on.rectangle")
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    location.requestPermissionIfNeeded()
+                    path.append(.pickSpecies)
+                } label: {
+                    Label("Log without a photo", systemImage: "binoculars")
                         .frame(maxWidth: .infinity, minHeight: 52)
                 }
                 .buttonStyle(.bordered)
