@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
@@ -40,7 +40,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Select newest Xcode
         run: |
@@ -83,6 +83,7 @@ jobs:
       - name: Build and run unit tests
         run: |
           set -o pipefail
+          mkdir -p build
           xcodebuild test \
             -project DownUnderBirdCollector.xcodeproj \
             -scheme DownUnderBirdCollector \
@@ -115,6 +116,9 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             2>&1 | tee build/release.log | grep -E '(: error:|\*\* BUILD)' || true
           grep -q '\*\* BUILD SUCCEEDED \*\*' build/release.log
+
+      - name: Typecheck the Create ML training script
+        run: xcrun swiftc -typecheck scripts/train-model/train.swift
 
       - name: Show compiler errors
         if: failure()

@@ -1,0 +1,65 @@
+name: Web
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'web/**'
+      - 'DownUnderBirdCollector/Resources/Seeds/**'
+      - '.github/workflows/web.yml'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test web app
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Unit tests
+        run: npm test
+      - name: End-to-end (build, capture, offline)
+        run: SCREENSHOTS=1 npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-screenshots
+          path: web/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref_name == github.event.repository.default_branch
+        with:
+          path: web/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    # Pages only deploys from the default branch. Enable it once under
+    # Settings → Pages → Source: "GitHub Actions".
+    if: github.ref_name == github.event.repository.default_branch && github.event_name != 'pull_request'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

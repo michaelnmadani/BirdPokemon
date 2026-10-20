@@ -1,36 +1,54 @@
-# Training a regional BirdClassifier
+# Training the bird identification model
 
-The iOS app expects one Core ML model per supported region, named
-`BirdClassifier_<REGION>.mlmodel` and either bundled or downloaded into the
-`Resources/ML` folder.
+The app identifies birds with an on-device Core ML image classifier,
+`BirdClassifier_<REGION>.mlmodel`, whose labels are eBird species codes. No
+model is bundled yet — until there is one, the app asks people to choose the
+species themselves, which works fine.
 
-## Prerequisites
+Training needs a Mac with Xcode (Create ML ships with it).
 
-- macOS with Xcode 15+ (for Create ML)
-- A folder of training images built by `scripts/seed-ebird/fetch-inat-images.ts`
-  (see that script for format). One subfolder per species, named by eBird code.
-- At least 50 images per class. Classes with fewer than 50 images should be
-  moved out of the training folder — Create ML can still produce a model, but
-  the sparse classes will dominate bad predictions.
+## 1. Download training photos (any machine with Node 20+)
 
-## Steps
+```sh
+cd scripts/seed-ebird
+npm install
+npm run fetch-images -- --region AU --perSpecies 150
+```
 
-1. Open Create ML: `open -a "Create ML"`.
-2. New document → Image Classification.
-3. Training Data → point at `scripts/seed-ebird/data/training/AU/` (or whichever region).
-4. Augmentations: enable horizontal flip, rotation ±15°, crop.
-5. Algorithm: Transfer Learning on "MobileNetV2" (best size/accuracy trade-off).
-6. Train.
-7. Evaluate with a held-out validation set and note top-1 / top-5 accuracy.
-8. Export → `BirdClassifier_AU.mlmodel`.
-9. Drop into `BirdPokemon/Resources/ML/` for AU (bundled with the app) or
-   upload to Firebase Storage at `models/BirdClassifier_<REGION>.mlmodel` for
-   NZ / GB / US (downloaded on first region selection).
+This saves CC-licensed, research-grade iNaturalist photos to
+`scripts/seed-ebird/data/training/AU/<ebirdCode>/` with a `manifest.jsonl` of
+photographer credits. 500 species × 150 photos is about 75,000 images
+(~6 GB) and takes several hours because the script respects iNaturalist's
+rate limit. It is resumable — stop and re-run any time. Use `--limit 20` for
+a quick trial run on the first 20 species.
+
+## 2. Train (Mac)
+
+```sh
+swift scripts/train-model/train.swift AU
+```
+
+Species with fewer than 40 photos are skipped. The script prints training and
+validation accuracy and writes
+`DownUnderBirdCollector/Resources/ML/BirdClassifier_AU.mlmodel`.
+
+Prefer a GUI? Open Create ML (`open -a "Create ML"`), make an Image
+Classification project, point Training Data at the same folder and export the
+model to the same path.
+
+## 3. Ship it
+
+```sh
+xcodegen generate
+```
+
+Build and run: the capture flow now shows "We think this is a…" with a
+confidence bar, and falls back to the manual species picker when the model
+isn't sure (top guess under 85% or close to the runner-up).
 
 ## Notes
 
-- Training data is **not** checked in — it's large (tens of GB) and many
-  photos are CC-BY-NC which is incompatible with code hosting ToS that assume
-  redistributable content. Each contributor regenerates locally.
-- Preserve `manifest.jsonl` from the fetch step alongside the model so we
-  can credit photographers if we ever display sample imagery.
+- Training photos are **not** committed: they're large and many are
+  CC BY-NC. Each contributor regenerates them locally (`data/` is gitignored).
+- A 500-class model trained with Create ML's scene-print feature extractor is
+  small (a few MB), which keeps the app download light.
