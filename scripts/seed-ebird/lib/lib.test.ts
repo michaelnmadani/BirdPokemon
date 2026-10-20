@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { normalizeColor, normalizeSpecies, bucketSize } from "./bundle.ts";
 import { cleanAttribution, photoSize } from "./inat.ts";
 import { parseCsv } from "./csv.ts";
+import { licenceFromUrl } from "../fetch-calls.ts";
 
 test("colour aliases fold onto the app palette", () => {
   assert.equal(normalizeColor("Rufous"), "orange");
@@ -39,4 +40,10 @@ test("iNat attribution is reduced to the photographer credit", () => {
 
 test("CSV parser handles quotes and commas", () => {
   assert.deepEqual(parseCsv('a,b\n"x, y","he said ""hi"""\r\n1,2\n'), [["a", "b"], ["x, y", 'he said "hi"'], ["1", "2"]]);
+});
+
+test("xeno-canto licence URLs map to licence codes", () => {
+  assert.equal(licenceFromUrl("//creativecommons.org/licenses/by-nc-sa/4.0/"), "cc-by-nc-sa");
+  assert.equal(licenceFromUrl("https://creativecommons.org/licenses/by/4.0/"), "cc-by");
+  assert.equal(licenceFromUrl("//creativecommons.org/publicdomain/zero/1.0/"), "cc0");
 });

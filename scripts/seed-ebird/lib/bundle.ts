@@ -57,6 +57,12 @@ export type BundledSpecies = {
   thumbnailURL: string | null;
   thumbnailAttribution: string | null;
   thumbnailLicense: string | null;
+  /** A recording of its call/song, played by "Hear its call". */
+  callURL: string | null;
+  callAttribution: string | null;
+  callLicense: string | null;
+  callSource: "xeno-canto" | "inaturalist" | null;
+  callPageURL: string | null;
   wikipediaURL: string | null;
   ebirdURL: string;
 };
@@ -159,6 +165,11 @@ export function normalizeSpecies(raw: Record<string, unknown>): {
       thumbnailURL: optStr("thumbnailURL"),
       thumbnailAttribution: optStr("thumbnailAttribution"),
       thumbnailLicense: optStr("thumbnailLicense"),
+      callURL: optStr("callURL"),
+      callAttribution: optStr("callAttribution"),
+      callLicense: optStr("callLicense"),
+      callSource: (["xeno-canto", "inaturalist"].includes(raw.callSource as string) ? raw.callSource : null) as BundledSpecies["callSource"],
+      callPageURL: optStr("callPageURL"),
       wikipediaURL: optStr("wikipediaURL"),
       ebirdURL: optStr("ebirdURL") ?? `https://ebird.org/species/${code}`,
     },
