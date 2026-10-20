@@ -28,10 +28,11 @@ self.addEventListener('fetch', (event) => {
 
   if (url.origin === self.location.origin) {
     event.respondWith(appShell(request));
-  } else if (PHOTO_HOSTS.includes(url.hostname)) {
+  } else if (PHOTO_HOSTS.includes(url.hostname) && request.destination === 'image') {
+    // Only photos: audio uses range requests that a cached full response would break.
     event.respondWith(speciesPhoto(request));
   }
-  // Everything else (map tiles, eBird links) goes straight to the network.
+  // Everything else (bird calls, map tiles, eBird) goes straight to the network.
 });
 
 async function appShell(request) {

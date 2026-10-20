@@ -65,6 +65,9 @@ struct SpeciesDetailView: View {
                 }
                 .padding(.horizontal)
 
+                CallPlayerView(species: species)
+                    .padding(.horizontal)
+
                 let groups = catalog.groups(containing: species.ebirdCode, in: appState.selectedRegion)
                 if !groups.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {

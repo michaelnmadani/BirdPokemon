@@ -35,6 +35,15 @@ const context = await browser.newContext({
   locale: 'en-AU',
   timezoneId: 'Australia/Brisbane',
 });
+// Give the Laughing Kookaburra a call recording (served from a local fixture).
+await context.route('**/data/taxonomy_AU.json', async (route) => {
+  const resp = await route.fetch();
+  const species = await resp.json();
+  const kooka = species.find((s) => s.ebirdCode === 'laukoo1');
+  Object.assign(kooka, { callURL: 'https://calls.test/laukoo1.wav', callAttribution: '© Test Recordist', callLicense: 'cc-by-nc', callSource: 'xeno-canto', callPageURL: 'https://xeno-canto.org/1' });
+  await route.fulfill({ response: resp, json: species });
+});
+await context.route('https://calls.test/**', (route) => route.fulfill({ path: fixture('call.wav'), contentType: 'audio/wav' }));
 const page = await context.newPage();
 page.setDefaultTimeout(20000);
 const errors = [];
@@ -98,6 +107,17 @@ try {
     await page.locator('.species-row', { hasText: 'Laughing Kookaburra' }).click();
     await page.getByRole('heading', { name: 'Laughing Kookaburra' }).waitFor();
     await page.getByText('Not collected yet').waitFor();
+  });
+
+  await step('Hear its call plays the recording', async () => {
+    await page.getByText('Recording: © Test Recordist · CC BY-NC via xeno-canto').waitFor();
+    await page.getByRole('button', { name: /Hear the call of the Laughing Kookaburra/ }).click();
+    await page.waitForFunction(() => {
+      const audio = document.querySelector('.call-player audio');
+      return audio && !audio.paused && audio.currentTime > 0;
+    });
+    await page.getByRole('button', { name: /Hear the call/ }).click();
+    await page.waitForFunction(() => document.querySelector('.call-player audio').paused);
   });
 
   await step('Capture from library uses the photo location', async () => {

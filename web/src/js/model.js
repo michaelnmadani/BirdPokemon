@@ -65,6 +65,11 @@ export function normalizeSpecies(raw) {
     thumbnailURL: raw.thumbnailURL ?? null,
     thumbnailAttribution: raw.thumbnailAttribution ?? null,
     thumbnailLicense: raw.thumbnailLicense ?? null,
+    callURL: raw.callURL ?? null,
+    callAttribution: raw.callAttribution ?? null,
+    callLicense: raw.callLicense ?? null,
+    callSource: raw.callSource ?? null,
+    callPageURL: raw.callPageURL ?? null,
     ebirdURL: raw.ebirdURL ?? `https://ebird.org/species/${raw.ebirdCode}`,
     wikipediaURL: raw.wikipediaURL ?? null,
   };
@@ -82,6 +87,13 @@ export function licenceLabel(code) {
 export function photoCredit(species) {
   const parts = [species.thumbnailAttribution, licenceLabel(species.thumbnailLicense)].filter(Boolean);
   return parts.length ? parts.join(' · ') : null;
+}
+
+export function callCredit(species) {
+  if (!species.callURL) return null;
+  const source = { 'xeno-canto': 'xeno-canto', inaturalist: 'iNaturalist' }[species.callSource] ?? 'the web';
+  const parts = [species.callAttribution, licenceLabel(species.callLicense)].filter(Boolean);
+  return `${parts.join(' · ') || 'Recording'} via ${source}`;
 }
 
 export function emptyCriteria() {
