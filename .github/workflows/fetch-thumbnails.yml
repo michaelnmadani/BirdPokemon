@@ -1,4 +1,7 @@
-name: Fetch Bird Thumbnails
+name: Fetch species photos
+
+# Picks a CC-licensed iNaturalist photo (with photographer credit) for each
+# species missing one, and commits the updated taxonomy JSON to this branch.
 
 on:
   workflow_dispatch:
@@ -10,9 +13,14 @@ on:
         type: choice
         options: [AU, NZ, GB, US]
       limit:
-        description: 'Max species to process (leave blank for all 500)'
+        description: 'Max species to process (blank = all)'
         required: false
         default: ''
+      refresh_attribution:
+        description: 'Also add credits to species that already have a photo'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -20,44 +28,40 @@ permissions:
 jobs:
   fetch-thumbnails:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
+    timeout-minutes: 45
+    env:
+      REGION: ${{ inputs.region }}
+      LIMIT: ${{ inputs.limit }}
+      REFRESH: ${{ inputs.refresh_attribution }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install dependencies
         working-directory: scripts/seed-ebird
-        run: npm install
+        run: npm ci
 
-      - name: Fetch thumbnails
+      - name: Fetch photos
         working-directory: scripts/seed-ebird
         run: |
-          REGION="${{ inputs.region }}"
-          REGION="${REGION:-AU}"
-          ARGS="--region $REGION"
-          if [ -n "${{ inputs.limit }}" ]; then
-            ARGS="$ARGS --limit ${{ inputs.limit }}"
-          fi
-          echo "Running: npm run fetch-thumbnails -- $ARGS"
-          npm run fetch-thumbnails -- $ARGS
+          ARGS=(--region "$REGION")
+          if [[ "$LIMIT" =~ ^[0-9]+$ ]]; then ARGS+=(--limit "$LIMIT"); fi
+          if [[ "$REFRESH" == "true" ]]; then ARGS+=(--refresh-attribution); fi
+          npm run fetch-thumbnails -- "${ARGS[@]}"
+          npm run validate -- --region "$REGION"
 
-      - name: Commit updated taxonomy JSON
+      - name: Commit updated taxonomy
         run: |
-          REGION="${{ inputs.region }}"
-          REGION="${REGION:-AU}"
+          FILE="DownUnderBirdCollector/Resources/Seeds/taxonomy_${REGION}.json"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add BirdPokemon/Resources/Seeds/taxonomy_${REGION}.json
+          git add "$FILE"
           if git diff --staged --quiet; then
-            echo "No thumbnail changes to commit."
+            echo "No photo changes to commit."
           else
-            git commit -m "Add iNaturalist thumbnails for ${REGION} species"
+            git commit -m "Add iNaturalist photos and credits for ${REGION} species"
             git push
-            echo "Pushed updated taxonomy JSON."
           fi
