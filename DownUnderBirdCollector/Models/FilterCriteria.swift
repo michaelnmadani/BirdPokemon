@@ -24,7 +24,7 @@ struct FilterCriteria: Equatable {
         if !families.isEmpty, !families.contains(species.family) { return false }
         let needle = searchText.trimmingCharacters(in: .whitespaces).lowercased()
         if !needle.isEmpty {
-            let haystack = [species.commonName, species.scientificName, species.familyDisplayName]
+            let haystack = [species.commonName, species.scientificName, species.familyDisplayName, species.groupText]
                 .joined(separator: " ")
                 .lowercased()
             if !haystack.contains(needle) { return false }

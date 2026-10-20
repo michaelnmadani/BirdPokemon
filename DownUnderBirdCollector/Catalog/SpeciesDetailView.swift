@@ -4,6 +4,8 @@ struct SpeciesDetailView: View {
     let species: Species
 
     @EnvironmentObject private var store: SightingStore
+    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var catalog: SpeciesCatalog
 
     private var mySightings: [Sighting] {
         store.sightings(of: species.ebirdCode)
@@ -62,6 +64,27 @@ struct SpeciesDetailView: View {
                     }
                 }
                 .padding(.horizontal)
+
+                let groups = catalog.groups(containing: species.ebirdCode, in: appState.selectedRegion)
+                if !groups.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(groups) { group in
+                                NavigationLink {
+                                    GroupDetailView(group: group)
+                                } label: {
+                                    Text(group.kind == .genus ? "\(group.name) (\(group.genus ?? ""))" : group.title)
+                                        .font(.caption)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 5)
+                                        .background(Color(.secondarySystemBackground), in: Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
 
                 Divider()
 

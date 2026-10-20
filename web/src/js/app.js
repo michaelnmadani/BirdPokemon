@@ -4,6 +4,7 @@ import { h, toast } from './ui.js';
 import { collectionView } from './views/collection.js';
 import { guideView } from './views/guide.js';
 import { speciesView } from './views/species.js';
+import { groupView, groupsView } from './views/groups.js';
 import { captureView } from './views/capture.js';
 import { sightingsView, sightingDetailView } from './views/sightings.js';
 import { mapView } from './views/map.js';
@@ -21,6 +22,8 @@ const ROUTES = {
   collection: collectionView,
   guide: guideView,
   species: speciesView,
+  groups: groupsView,
+  group: groupView,
   capture: captureView,
   sightings: sightingsView,
   sighting: sightingDetailView,
@@ -29,7 +32,7 @@ const ROUTES = {
 };
 
 // Which tab a detail screen belongs to, for highlighting.
-const TAB_FOR = { species: 'guide', sighting: 'sightings', settings: 'collection' };
+const TAB_FOR = { species: 'guide', groups: 'guide', group: 'guide', sighting: 'sightings', settings: 'collection' };
 
 function readPref(key, fallback) {
   try {

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The field guide: every species in the selected region, searchable and
-/// filterable by size, colour and family.
+/// filterable by size, colour and family, and browsable by bird group or genus.
 struct CatalogView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var catalog: SpeciesCatalog
@@ -21,9 +21,26 @@ struct CatalogView: View {
             VStack(spacing: 0) {
                 FilterBarView(state: filterState, resultCount: results.count)
                     .padding(.vertical, 6)
-                List(results) { species in
-                    NavigationLink(value: species) {
-                        SpeciesRowView(species: species, isCaptured: store.isCaptured(species))
+                GroupChipsRow(groups: catalog.groups(in: appState.selectedRegion))
+                    .padding(.bottom, 6)
+                List {
+                    let matchingGroups = SpeciesGrouping.matching(
+                        catalog.groups(in: appState.selectedRegion),
+                        query: filterState.criteria.searchText
+                    )
+                    if !matchingGroups.isEmpty {
+                        Section("Groups") {
+                            ForEach(matchingGroups) { group in
+                                NavigationLink { GroupDetailView(group: group) } label: { GroupRowView(group: group) }
+                            }
+                        }
+                    }
+                    Section(matchingGroups.isEmpty ? "" : "Species") {
+                        ForEach(results) { species in
+                            NavigationLink(value: species) {
+                                SpeciesRowView(species: species, isCaptured: store.isCaptured(species))
+                            }
+                        }
                     }
                 }
                 .listStyle(.plain)

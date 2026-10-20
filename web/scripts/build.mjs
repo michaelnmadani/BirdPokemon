@@ -30,6 +30,7 @@ for (const file of readdirSync(seeds).sort()) {
   regions.push(match[1]);
 }
 writeFileSync(join(dist, 'data/regions.json'), JSON.stringify(regions));
+cpSync(join(seeds, 'groups.json'), join(dist, 'data/groups.json'));
 
 // Leaflet (BSD-2-Clause) for the map screen.
 mkdirSync(join(dist, 'vendor/leaflet'), { recursive: true });

@@ -20,6 +20,10 @@ struct Species: Identifiable, Hashable {
     let wikipediaURL: String?
     let ebirdURL: String
 
+    /// Names of the groups this species belongs to, so searching "parrot" or
+    /// "rosella" finds it. Filled in by `SpeciesCatalog`, not decoded.
+    var groupText: String = ""
+
     var id: String { ebirdCode }
 
     var regions: [Region] {
