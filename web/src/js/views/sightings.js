@@ -15,7 +15,8 @@ export function sightingRow(app, s) {
 export function sightingsView(app) {
   const { sightings } = app.store;
   return h('section.view',
-    h('header.top', h('h1', 'Sightings'), h('span.muted.small', `${sightings.length} total`)),
+    h('header.top', h('h1', 'Sightings'), h('span.muted.small', `${sightings.length} total`),
+      h('a.btn.small', { href: '#/map' }, 'Map')),
     sightings.length
       ? h('ul.rows', sightings.map((s) => h('li', sightingRow(app, s))))
       : h('div.empty-state',

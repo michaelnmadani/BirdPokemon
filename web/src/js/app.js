@@ -8,14 +8,15 @@ import { groupView, groupsView } from './views/groups.js';
 import { captureView } from './views/capture.js';
 import { sightingsView, sightingDetailView } from './views/sightings.js';
 import { mapView } from './views/map.js';
+import { nearbyView } from './views/nearby.js';
 import { settingsView } from './views/settings.js';
 
 const TABS = [
   { route: 'collection', label: 'Collection', icon: 'grid' },
   { route: 'guide', label: 'Field Guide', icon: 'book' },
   { route: 'capture', label: 'Capture', icon: 'camera' },
+  { route: 'nearby', label: 'Nearby', icon: 'pin' },
   { route: 'sightings', label: 'Sightings', icon: 'list' },
-  { route: 'map', label: 'Map', icon: 'map' },
 ];
 
 const ROUTES = {
@@ -28,11 +29,12 @@ const ROUTES = {
   sightings: sightingsView,
   sighting: sightingDetailView,
   map: mapView,
+  nearby: nearbyView,
   settings: settingsView,
 };
 
 // Which tab a detail screen belongs to, for highlighting.
-const TAB_FOR = { species: 'guide', groups: 'guide', group: 'guide', sighting: 'sightings', settings: 'collection' };
+const TAB_FOR = { species: 'guide', groups: 'guide', group: 'guide', sighting: 'sightings', map: 'sightings', settings: 'collection' };
 
 function readPref(key, fallback) {
   try {

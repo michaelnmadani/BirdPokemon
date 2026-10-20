@@ -52,7 +52,8 @@ targets:
           - arm64
         ITSAppUsesNonExemptEncryption: false
         NSCameraUsageDescription: "Down Under Bird Collector uses the camera to photograph birds you spot."
-        NSLocationWhenInUseUsageDescription: "Your location is saved with each sighting so you can see where you found each bird on the map."
+        NSLocationWhenInUseUsageDescription: "Your location is saved with each sighting, and used to show birds spotted near you."
+        EBirdAPIKey: $(EBIRD_API_KEY)
     entitlements:
       path: DownUnderBirdCollector/Supporting/DownUnderBirdCollector.entitlements
       properties:

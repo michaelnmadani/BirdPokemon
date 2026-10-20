@@ -2,7 +2,8 @@
 
 A test version of the app that runs in any modern browser and works fully
 offline after the first visit. It has the same screens as the iOS app
-(Collection, Field Guide, Capture, Sightings, Map, Settings) and reads the
+(Collection, Field Guide with bird groups, Capture, Nearby, Sightings with a
+map, Settings) and reads the
 same species data.
 
 Differences from iOS: the species is always chosen by hand (no on-device

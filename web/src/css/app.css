@@ -289,3 +289,9 @@ input[type="datetime-local"] { font: inherit; color: var(--text); background: va
 .group-chip.more { background: var(--accent-soft); color: var(--accent); margin-right: 16px; }
 .group-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .group-links .pill { text-decoration: none; color: var(--text); }
+
+/* Nearby */
+.nearmap { height: 260px; border-radius: var(--radius); overflow: hidden; background: var(--surface-2); margin: 6px 0 12px; }
+.notice { background: var(--accent-soft); border-radius: 12px; padding: 10px 12px; font-size: 0.88rem; }
+.segmented.two { grid-template-columns: repeat(2, 1fr); }
+.top .btn.small { flex: 0 0 auto; }

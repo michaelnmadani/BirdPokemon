@@ -7,10 +7,15 @@ saw it. Fill the album one species at a time — 500 Australian birds to find.
 - **Collection** — every species as a card; the ones you haven't found stay
   hidden until you photograph them.
 - **Field Guide** — search and filter all 500 species by size, colour and
-  family, with photos credited to their iNaturalist photographers.
-- **Capture** — camera with telephoto zoom (or pick from your photo
-  library), choose or confirm the species, and save. Location comes from
-  GPS or from the photo itself.
+  family, or browse by group (flightless birds, parrots & cockatoos, birds of
+  prey, …) and by genus (rosellas, kookaburras, fairywrens, …). Photos are
+  credited to their iNaturalist photographers.
+- **Capture** — camera with telephoto zoom, a photo from your library, or
+  no photo at all for birds you only saw or heard. Choose or confirm the
+  species and save. Location comes from GPS or from the photo itself.
+- **Nearby** — every bird spotted within 5 km of where you are: your own
+  sightings, plus recent eBird reports from other birdwatchers if you add a
+  free eBird API key in Settings. Filter to the ones you haven't collected.
 - **Sightings & Map** — your log, with every sighting pinned on a map.
 
 Everything works offline and stays on the phone. No account needed.
@@ -60,6 +65,9 @@ testing on a phone.
 
 ## How it fits together
 
+- **Bird groups**: curated groups live in `Seeds/groups.json` (matched by
+  order, family or species code); genus groups are generated from any genus
+  with two or more species, named from their members' common names.
 - **Species data**: `taxonomy_AU.json` ships inside the app. It's loaded at
   launch and decoded leniently, so one odd record can never empty the catalog.
 - **Sightings**: saved on the device (Application Support: a JSON index and

@@ -38,6 +38,15 @@ struct SightingsListView: View {
                 }
             }
             .navigationTitle("Sightings")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        SightingsMapView()
+                    } label: {
+                        Label("Map", systemImage: "map")
+                    }
+                }
+            }
             .navigationDestination(for: String.self) { id in
                 SightingDetailView(sightingID: id)
             }

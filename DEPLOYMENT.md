@@ -79,7 +79,10 @@ invite for your Apple ID (App Store Connect → TestFlight → Internal Testing)
   starting point; publish it (e.g. with GitHub Pages) and paste the URL into
   App Store Connect.
 - **App Privacy** answers: with the default on-device storage the app
-  collects **no data** ("Data Not Collected"). If you turn on Firebase sync,
+  collects **no data** ("Data Not Collected"). The optional Nearby/eBird
+  lookup sends a location rounded to ~1 km to eBird only when someone enters
+  their own API key; if you ship a built-in key (`EBIRD_API_KEY`), declare
+  Coarse Location (not linked to the user, not used for tracking). If you turn on Firebase sync,
   declare Photos, Precise Location, Email Address and User ID (linked to the
   user, not used for tracking), and add them to
   `DownUnderBirdCollector/Supporting/PrivacyInfo.xcprivacy`.

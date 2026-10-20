@@ -31,6 +31,13 @@ browse the field guide; loading an image tells those servers your IP
 address, as any web image does. The app doesn't send them anything about
 you or your sightings.
 
+## Nearby birds (eBird)
+
+If you add an eBird API key, the Nearby tab asks eBird (Cornell Lab of
+Ornithology) for birds reported near you. That request includes your
+location rounded to about 1 km and your API key — nothing about your
+sightings. Without a key, nothing is sent.
+
 ## What we don't do
 
 No accounts (unless cloud sync is enabled — see below), no analytics, no

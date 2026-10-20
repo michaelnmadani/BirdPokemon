@@ -51,6 +51,12 @@ const go = async (name) => {
   await page.locator('h1', { hasText: name === 'Capture' ? /Capture|Which bird|Save sighting/ : name }).waitFor();
 };
 
+const openMap = async () => {
+  await go('Sightings');
+  await page.locator('header').getByRole('link', { name: 'Map', exact: true }).click();
+  await page.locator('h1', { hasText: 'Map' }).waitFor();
+};
+
 const step = async (name, fn) => {
   process.stdout.write(`• ${name} … `);
   await fn();
@@ -140,7 +146,7 @@ try {
   });
 
   await step('Map pins both sightings', async () => {
-    await go('Map');
+    await openMap();
     await page.waitForFunction(() => document.querySelectorAll('.bigmap .leaflet-marker-icon').length === 2);
   });
 
@@ -154,7 +160,7 @@ try {
     await go('Field Guide');
     await page.getByRole('searchbox').fill('emu');
     await page.locator('.species-row', { hasText: 'Emu' }).first().waitFor();
-    await go('Map');
+    await openMap();
     await page.locator('.bigmap .leaflet-marker-icon').first().waitFor();
     await context.setOffline(false);
   });
@@ -189,7 +195,50 @@ try {
     await page.getByText(/2 of 500 collected/).waitFor();
   });
 
+  await step('Nearby shows your sightings within 5 km', async () => {
+    await go('Nearby');
+    await page.getByText(/1 species spotted within 5 km/).waitFor();
+    await page.locator('.species-row', { hasText: 'Emu' }).getByText('You: 1 sighting').waitFor();
+    assert.equal(await page.locator('.species-row', { hasText: 'Laughing Kookaburra' }).count(), 0, 'Brisbane sighting is far away');
+    await page.getByText('Add a free eBird API key').waitFor();
+  });
+
+  await step('Nearby adds recent eBird reports once a key is set', async () => {
+    let requestedUrl = '';
+    await context.route('https://api.ebird.org/**', (route) => {
+      requestedUrl = route.request().url();
+      route.fulfill({
+        contentType: 'application/json',
+        headers: { 'access-control-allow-origin': '*' },
+        body: JSON.stringify([
+          { speciesCode: 'rainbowlor1', comName: 'Rainbow Lorikeet', sciName: 'Trichoglossus moluccanus', locName: 'Hyde Park', obsDt: '2026-10-18 08:15', howMany: 12, lat: -33.873, lng: 151.211 },
+          { speciesCode: 'auwhib1', comName: 'Australian White Ibis', sciName: 'Threskiornis molucca', locName: 'The Domain', obsDt: '2026-10-19 16:40', howMany: 3, lat: -33.866, lng: 151.216 },
+          { speciesCode: 'emu1', comName: 'Emu', sciName: 'Dromaius novaehollandiae', locName: 'Somewhere', obsDt: '2026-10-01', lat: -33.87, lng: 151.2 },
+          { speciesCode: 'mysbir1', comName: 'Mystery Bird', sciName: 'Avis incognita', locName: 'Botanic Garden', obsDt: '2026-10-17 07:00', lat: -33.864, lng: 151.217 },
+          { speciesCode: 'noimin1', comName: 'Noisy Miner', sciName: 'Manorina melanocephala', locName: 'Far away', obsDt: '2026-10-19 09:00', lat: -27.47, lng: 153.02 },
+        ]),
+      });
+    });
+    await page.goto(`${base}#/settings`);
+    await page.getByLabel('eBird API key').fill('test-key-123');
+    await page.getByRole('button', { name: 'Save key' }).click();
+    await go('Nearby');
+    await page.getByText(/4 species spotted within 5 km/).waitFor();
+    assert.match(requestedUrl, /dist=6/);
+    assert.match(requestedUrl, /lat=-33\.87&lng=151\.21/);
+    assert.match(requestedUrl, /key=test-key-123/);
+    await page.locator('.species-row', { hasText: 'Rainbow Lorikeet' }).getByText(/eBird: .* · Hyde Park/).waitFor();
+    await page.locator('.species-row', { hasText: 'Mystery Bird' }).getByText('Not in the field guide yet').waitFor();
+    assert.equal(await page.locator('.species-row', { hasText: 'Noisy Miner' }).count(), 0, 'reports outside 5 km are dropped');
+    await page.getByRole('tab', { name: 'Not collected yet' }).click();
+    const missing = await page.locator('.rows .species-row strong').allTextContents();
+    assert.deepEqual(missing.sort(), ['Australian White Ibis', 'Mystery Bird', 'Rainbow Lorikeet']);
+    await page.locator('.nearmap .leaflet-interactive').first().waitFor();
+    await context.unroute('https://api.ebird.org/**');
+  });
+
   await step('Settings reports offline readiness', async () => {
+    await go('Collection');
     await page.getByRole('link', { name: 'Settings' }).click();
     await page.getByText('Ready to use offline').waitFor();
   });

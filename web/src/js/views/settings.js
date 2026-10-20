@@ -1,4 +1,5 @@
 import { REGIONS } from '../model.js';
+import { getApiKey, setApiKey } from '../ebird.js';
 import { backButton, confirmDialog, h, toast } from '../ui.js';
 
 const PHOTO_CACHE = 'species-photos';
@@ -85,6 +86,9 @@ export function settingsView(app) {
       h('button.btn.danger.wide', { type: 'button', onclick: deleteAll }, 'Delete all sightings'),
     ),
 
+    h('h2', 'Nearby birds (eBird)'),
+    ebirdKeyCard(),
+
     h('h2', 'Offline'),
     h('div.card-list',
       h('div.item', h('span', 'App'), offlineStatus),
@@ -100,5 +104,26 @@ export function settingsView(app) {
     h('p.muted.small', 'This is the web test version of Down Under Bird Collector. Species data from eBird (Cornell Lab of Ornithology). Species photos by iNaturalist contributors, credited on each species page. Map © OpenStreetMap contributors.'),
     app.catalog.issues.length ? h('ul.issues', app.catalog.issues.map((i) => h('li', i))) : null,
     h('p.muted.small', `Build ${document.documentElement.dataset.build ?? 'dev'}`),
+  );
+}
+
+function ebirdKeyCard() {
+  const input = h('input.search', {
+    type: 'password', placeholder: 'Paste your eBird API key', value: getApiKey(),
+    autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'aria-label': 'eBird API key',
+  });
+  const save = () => {
+    setApiKey(input.value.trim());
+    toast(input.value.trim() ? 'eBird key saved — the Nearby tab will include recent reports.' : 'eBird key removed.');
+  };
+  return h('div.card-list',
+    h('p.muted.small', 'The Nearby tab can include what other birdwatchers reported within 5 km in the last 30 days. Get a free personal key at ',
+      h('a', { href: 'https://ebird.org/api/keygen', target: '_blank', rel: 'noopener' }, 'ebird.org/api/keygen'),
+      '. It’s stored only in this browser.'),
+    input,
+    h('div.row',
+      h('button.btn.small', { type: 'button', onclick: () => { input.type = input.type === 'password' ? 'text' : 'password'; } }, 'Show'),
+      h('span.spacer'),
+      h('button.btn.small.primary', { type: 'button', onclick: save }, 'Save key')),
   );
 }
