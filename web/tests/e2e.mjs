@@ -73,6 +73,21 @@ try {
     assert.ok(names.every((n) => /kookaburra/i.test(n)), names.join());
   });
 
+  await step('Browse bird groups and genera', async () => {
+    await page.getByRole('searchbox').fill('');
+    await page.locator('.group-chip', { hasText: 'Flightless birds' }).click();
+    await page.getByRole('heading', { name: /Flightless birds/ }).waitFor();
+    const flightless = await page.locator('.rows .species-row strong').allTextContents();
+    assert.deepEqual(flightless.sort(), ['Emu', 'Little Penguin', 'Southern Cassowary']);
+    await go('Field Guide');
+    await page.getByRole('searchbox').fill('rosel');
+    await page.locator('.group-row', { hasText: 'Rosellas' }).click();
+    await page.getByText('Genus Platycercus').first().waitFor();
+    await page.locator('.species-row', { hasText: 'Crimson Rosella' }).waitFor();
+    await go('Field Guide');
+    await page.getByRole('searchbox').fill('kookaburra');
+  });
+
   await step('Species detail shows taxonomy and photo credit slot', async () => {
     await page.locator('.species-row', { hasText: 'Laughing Kookaburra' }).click();
     await page.getByRole('heading', { name: 'Laughing Kookaburra' }).waitFor();

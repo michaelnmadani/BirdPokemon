@@ -99,7 +99,7 @@ export function matches(c, species) {
   if (c.families.size && !c.families.has(species.family)) return false;
   const needle = c.search.trim().toLowerCase();
   if (needle) {
-    const hay = `${species.commonName} ${species.scientificName} ${species.familyDisplayName} ${species.groupText ?? ''}`.toLowerCase();
+    const hay = `${species.commonName} ${species.scientificName} ${species.familyDisplayName}`.toLowerCase();
     if (!hay.includes(needle)) return false;
   }
   return true;

@@ -48,10 +48,9 @@ final class SpeciesGroupingTests: XCTestCase {
     }
 
     func testGroupNamesAreSearchable() throws {
-        var criteria = FilterCriteria()
-        criteria.searchText = "parrot"
-        let galah = try XCTUnwrap(catalog.species(in: .australia).first { $0.commonName == "Galah" })
-        XCTAssertTrue(criteria.matches(galah))
+        // Groups appear as their own search results rather than flooding the species list.
+        XCTAssertTrue(SpeciesGrouping.matching(catalog.groups(in: .australia), query: "parrot")
+            .contains { $0.id == "parrots" })
         XCTAssertTrue(SpeciesGrouping.matching(catalog.groups(in: .australia), query: "rosel")
             .contains { $0.genus == "Platycercus" })
         XCTAssertTrue(SpeciesGrouping.matching(catalog.groups(in: .australia), query: "ro").isEmpty)

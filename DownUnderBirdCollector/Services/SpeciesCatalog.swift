@@ -23,15 +23,7 @@ final class SpeciesCatalog: ObservableObject {
             }
             do {
                 let result = try Self.decode(Data(contentsOf: url))
-                let grouping = SpeciesGrouping.build(definitions: definitions, species: result.species)
-                // Make group names searchable, then rebuild the groups with the updated species.
-                let regionSpecies = result.species.map { species -> Species in
-                    var copy = species
-                    copy.groupText = (grouping.byCode[species.ebirdCode] ?? [])
-                        .map { "\($0.name) \($0.genus ?? "")" }
-                        .joined(separator: " ")
-                    return copy
-                }
+                let regionSpecies = result.species
                 groupsByRegion[region] = SpeciesGrouping.build(definitions: definitions, species: regionSpecies)
                 byRegion[region] = regionSpecies
                 for species in regionSpecies where byCode[species.ebirdCode] == nil {

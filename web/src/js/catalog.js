@@ -24,11 +24,6 @@ export class Catalog {
         const species = raw.map(normalizeSpecies).filter(Boolean);
         if (species.length < raw.length) this.issues.push(`${code}: skipped ${raw.length - species.length} unreadable species`);
         this.byRegion.set(code, species);
-        // Group names are searchable: "parrot" finds Galahs, "rosella" every rosella.
-        const { byCode } = this.groupsFor(code);
-        for (const s of species) {
-          s.groupText = (byCode.get(s.ebirdCode) ?? []).map((g) => `${g.name} ${g.genus ?? ''}`).join(' ');
-        }
         for (const s of species) if (!this.byCode.has(s.ebirdCode)) this.byCode.set(s.ebirdCode, s);
       } catch (err) {
         this.issues.push(`${code}: couldn't load species list (${err.message})`);
