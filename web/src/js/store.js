@@ -80,8 +80,9 @@ export class SightingStore extends EventTarget {
       locationAccuracy: draft.accuracy ?? null,
       locationSource: draft.coordinate ? draft.locationSource : null,
       notes: draft.notes || null,
-      mlTopPrediction: null,
-      mlTopConfidence: null,
+      mlTopPrediction: draft.mlTop?.code ?? null,
+      mlTopConfidence: draft.mlTop?.confidence ?? null,
+      identifiedBy: draft.identifiedBy ?? null,
       userOverrode: false,
       hasPhoto: Boolean(draft.photo),
     };

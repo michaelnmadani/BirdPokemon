@@ -51,7 +51,9 @@ export function sightingDetailView(app, id) {
     h('h1', s.speciesCommonName),
     h('p.sci', s.speciesSciName),
     h('p.muted', formatDate(s.capturedAt)),
-    s.hasPhoto === false ? h('p.muted.small', 'Logged without a photo — field guide picture shown.') : null,
+    s.identifiedBy === 'sound'
+      ? h('p.muted.small', `Identified by sound with BirdNET${s.mlTopConfidence ? ` (${Math.round(s.mlTopConfidence * 100)}%)` : ''}.`)
+      : s.hasPhoto === false ? h('p.muted.small', 'Logged without a photo — field guide picture shown.') : null,
     species ? h('p', h('a', { href: `#/species/${encodeURIComponent(species.ebirdCode)}` }, 'Field guide entry ›')) : null,
     hasLocation
       ? [mapHolder, h('p.muted.small', `${formatCoord(s.latitude, s.longitude, 5)}${s.locationSource === 'photo' ? ' · from the photo' : ''}`)]

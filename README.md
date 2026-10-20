@@ -9,10 +9,14 @@ saw it. Fill the album one species at a time — 500 Australian birds to find.
 - **Field Guide** — search and filter all 500 species by size, colour and
   family, or browse by group (flightless birds, parrots & cockatoos, birds of
   prey, …) and by genus (rosellas, kookaburras, fairywrens, …). Photos are
-  credited to their iNaturalist photographers.
+  credited to their iNaturalist photographers. **Hear its call** plays a
+  recording of each bird (from xeno-canto or iNaturalist, credited).
 - **Capture** — camera with telephoto zoom, a photo from your library, or
   no photo at all for birds you only saw or heard. Choose or confirm the
   species and save. Location comes from GPS or from the photo itself.
+- **Identify by sound** — listen through the microphone, or analyse a
+  recording, and BirdNET names the birds calling. It runs on the device, so
+  audio never leaves it. Tap a bird to log the sighting.
 - **Nearby** — every bird spotted within 5 km of where you are: your own
   sightings, plus recent eBird reports from other birdwatchers if you add a
   free eBird API key in Settings. Filter to the ones you haven't collected.
@@ -60,6 +64,7 @@ testing on a phone.
 | `web/` | Offline web app (no framework, no runtime dependencies) |
 | `scripts/seed-ebird/` | Node scripts that maintain the species data |
 | `scripts/train-model/` | Create ML script to train the bird-identification model |
+| `scripts/birdnet/` | Fetches the BirdNET sound-ID model into `models/birdnet/` (not in git) |
 | `project.yml`, `Config/` | XcodeGen project definition and build settings |
 | `.github/workflows/` | CI for iOS and web, TestFlight upload, photo fetching |
 
@@ -77,6 +82,18 @@ testing on a phone.
 - **Identification**: the app uses `BirdClassifier_AU.mlmodel` if one is
   bundled; until then you choose the species from the field guide. Training
   a model: [`scripts/train-model/README.md`](scripts/train-model/README.md).
+- **Bird calls**: `scripts/seed-ebird/fetch-calls.ts` (or the *Fetch bird
+  calls* workflow) picks one recording per species — xeno-canto first (set a
+  free `XENO_CANTO_API_KEY` secret), else iNaturalist — and stores the link
+  and credit in `taxonomy_AU.json`. Calls stream when played; they're not
+  bundled.
+- **Sound ID**: BirdNET V2.4 (6,522 classes, 3-second windows at 48 kHz).
+  `scripts/birdnet/fetch-model.sh` downloads it (from the pinned `birdnetlib`
+  PyPI wheel, checked by SHA-256); CI does this automatically. BirdNET labels
+  are matched to field-guide species by scientific, then common, name — 365
+  of the 500 Australian species. The web app runs it with LiteRT.js (WASM)
+  and downloads the 52 MB model on first use; iOS runs it with TensorFlow
+  Lite and bundles it.
 - **Optional cloud sync**: drop a Firebase `GoogleService-Info.plist` into
   `DownUnderBirdCollector/Supporting/` and the app switches to sign-in
   (Apple or email) with sightings synced through Firestore and Storage.
@@ -95,4 +112,11 @@ testing on a phone.
 Non-commercial use. Species names and taxonomy from eBird (Cornell Lab of
 Ornithology). Species photos from iNaturalist contributors under Creative
 Commons licences, credited in the app. AVONET morphology (CC BY 4.0) for size
-estimates. Map tiles © OpenStreetMap contributors (web version).
+estimates. Map tiles © OpenStreetMap contributors (web version). Bird calls
+from xeno-canto and iNaturalist recordists under their Creative Commons
+licences, credited with each recording. Sound identification by
+[BirdNET](https://birdnet.cornell.edu) (K. Lisa Yang Center for Conservation
+Bioacoustics, Cornell Lab of Ornithology & Chemnitz University of Technology);
+the model is licensed **CC BY-NC-SA 4.0**, so the app must stay
+non-commercial (free, no ads or in-app purchases) while it includes it.
+Runtime: LiteRT.js / TensorFlow Lite (Apache 2.0).

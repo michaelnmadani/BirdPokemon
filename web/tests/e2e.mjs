@@ -5,7 +5,7 @@
 //   npm run e2e            (builds first)
 //   SCREENSHOTS=1 npm run e2e   also saves screenshots to web/test-results/
 import { spawn } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
@@ -50,7 +50,8 @@ const errors = [];
 page.on('pageerror', (err) => errors.push(err.message));
 page.on('console', (msg) => {
   // Tiles and remote photos may legitimately fail (sandboxed CI, offline step).
-  if (msg.type() === 'error' && !/Failed to load resource|ERR_INTERNET_DISCONNECTED|net::/.test(msg.text())) errors.push(msg.text());
+  // LiteRT's WASM runtime logs its start-up chatter (INFO/WARNING lines) to stderr.
+  if (msg.type() === 'error' && !/Failed to load resource|ERR_INTERNET_DISCONNECTED|net::|^(INFO|WARNING): /.test(msg.text())) errors.push(msg.text());
 });
 
 const tab = (name) => page.locator('#tabbar').getByRole('link', { name, exact: true });
@@ -257,10 +258,50 @@ try {
     await context.unroute('https://api.ebird.org/**');
   });
 
+  const soundscape = resolve(root, '../models/birdnet/soundscape.wav');
+  if (existsSync(resolve(root, 'dist/models/birdnet')) && existsSync(soundscape)) {
+    await step('Identify birds by sound in a recording (BirdNET)', async () => {
+      await go('Capture');
+      await page.getByRole('link', { name: /Identify by sound/ }).click();
+      await page.getByRole('heading', { name: 'Identify by sound' }).waitFor();
+      await page.getByLabel('Only birds in the field guide').uncheck();
+      await page.locator('#sound-file').setInputFiles(soundscape);
+      await page.getByRole('heading', { name: 'Heard' }).waitFor({ timeout: 120_000 });
+      await page.getByText(/s of audio analysed from soundscape\.wav/).waitFor({ timeout: 120_000 });
+      const chickadee = page.locator('.species-row', { hasText: 'Black-capped Chickadee' });
+      await chickadee.getByText('Not in the field guide').waitFor();
+      assert.equal(await chickadee.getByRole('button', { name: 'Log it' }).count(), 0);
+      if (shots) await page.screenshot({ path: `${shots}/sound-id-results.png` });
+      await page.getByLabel('Only birds in the field guide').check();
+      assert.equal(await chickadee.count(), 0, 'field-guide filter hides North American birds');
+      await page.getByText(/untick “Only birds in the field guide”/).waitFor();
+    });
+
+    await step('Log a bird identified by sound', async () => {
+      // The test recording has no Australian birds, so press "Log it" the way the
+      // Heard list does, for a kookaburra heard at 87%.
+      await page.evaluate(async () => {
+        const { beginSoundSighting } = await import('./js/views/capture.js');
+        beginSoundSighting(window.dubc, window.dubc.catalog.get('laukoo1'), 0.87);
+      });
+      await page.getByText('Identified by sound with BirdNET (87% confidence).').waitFor();
+      await page.getByText('-33.86880, 151.20930').waitFor();
+      await page.getByRole('button', { name: 'Save sighting' }).click();
+      await page.getByText('Another Laughing Kookaburra for your log.').waitFor();
+      await page.getByRole('button', { name: 'Nice!' }).click();
+      await go('Sightings');
+      await page.locator('.species-row', { hasText: 'Laughing Kookaburra' }).first().click();
+      await page.getByText('Identified by sound with BirdNET (87%).').waitFor();
+    });
+  } else {
+    console.log('- skipped sound ID (run scripts/birdnet/fetch-model.sh --example, then build)');
+  }
+
   await step('Settings reports offline readiness', async () => {
     await go('Collection');
     await page.getByRole('link', { name: 'Settings' }).click();
     await page.getByText('Ready to use offline').waitFor();
+    if (existsSync(resolve(root, 'dist/models/birdnet'))) await page.getByText('Downloaded — works offline').waitFor();
   });
 
   assert.deepEqual(errors, [], `Console/page errors:\n${errors.join('\n')}`);

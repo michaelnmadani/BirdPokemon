@@ -6,6 +6,7 @@ on:
     paths:
       - 'web/**'
       - 'DownUnderBirdCollector/Resources/Seeds/**'
+      - 'scripts/birdnet/**'
       - '.github/workflows/web.yml'
   pull_request:
   workflow_dispatch:
@@ -29,6 +30,14 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - name: Cache BirdNET model
+        uses: actions/cache@v4
+        with:
+          path: models/birdnet
+          key: birdnet-${{ hashFiles('scripts/birdnet/fetch-model.sh') }}
+      - name: Fetch BirdNET model (sound ID)
+        working-directory: .
+        run: scripts/birdnet/fetch-model.sh --example
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Unit tests

@@ -1,5 +1,6 @@
 import { REGIONS } from '../model.js';
 import { getApiKey, setApiKey } from '../ebird.js';
+import { MODEL_MB, isAvailable, isDownloaded, removeDownload } from '../soundid.js';
 import { backButton, confirmDialog, h, toast } from '../ui.js';
 
 const PHOTO_CACHE = 'species-photos';
@@ -89,6 +90,9 @@ export function settingsView(app) {
     h('h2', 'Nearby birds (eBird)'),
     ebirdKeyCard(),
 
+    h('h2', 'Sound ID (BirdNET)'),
+    soundCard(app),
+
     h('h2', 'Offline'),
     h('div.card-list',
       h('div.item', h('span', 'App'), offlineStatus),
@@ -101,9 +105,32 @@ export function settingsView(app) {
     h('p.muted', 'In Safari, tap Share → “Add to Home Screen”. The app then opens full-screen and works without a connection.'),
 
     h('h2', 'About'),
-    h('p.muted.small', 'This is the web test version of Down Under Bird Collector. Species data from eBird (Cornell Lab of Ornithology). Species photos by iNaturalist contributors, credited on each species page. Map © OpenStreetMap contributors.'),
+    h('p.muted.small', 'This is the web test version of Down Under Bird Collector. Species data from eBird (Cornell Lab of Ornithology). Species photos by iNaturalist contributors, credited on each species page. Map © OpenStreetMap contributors. Bird calls from xeno-canto and iNaturalist recordists, credited under each player. Sound ID by BirdNET (Cornell Lab of Ornithology & Chemnitz University of Technology), model licensed CC BY-NC-SA 4.0.'),
     app.catalog.issues.length ? h('ul.issues', app.catalog.issues.map((i) => h('li', i))) : null,
     h('p.muted.small', `Build ${document.documentElement.dataset.build ?? 'dev'}`),
+  );
+}
+
+function soundCard(app) {
+  const status = h('span.muted', 'Checking…');
+  const remove = h('button.btn.small', { type: 'button', hidden: true }, 'Remove download');
+  const refresh = async () => {
+    const [available, downloaded] = await Promise.all([isAvailable(), isDownloaded()]);
+    status.textContent = !available ? 'Not included in this build'
+      : downloaded ? '✓ Downloaded — works offline' : `Downloads on first use (${MODEL_MB} MB)`;
+    remove.hidden = !downloaded;
+  };
+  remove.addEventListener('click', async () => {
+    await removeDownload();
+    toast('Sound ID model removed. It downloads again next time you use it.');
+    refresh();
+  });
+  refresh();
+  return h('div.card-list',
+    h('div.item', h('span', 'Model'), status),
+    h('p.muted.small', 'Identifies birds from their calls on your device — audio is never uploaded. ',
+      h('a', { href: '#/listen' }, 'Identify by sound')),
+    remove,
   );
 }
 

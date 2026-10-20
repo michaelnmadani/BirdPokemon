@@ -9,6 +9,7 @@ import { captureView } from './views/capture.js';
 import { sightingsView, sightingDetailView } from './views/sightings.js';
 import { mapView } from './views/map.js';
 import { nearbyView } from './views/nearby.js';
+import { listenView } from './views/listen.js';
 import { settingsView } from './views/settings.js';
 
 const TABS = [
@@ -30,11 +31,12 @@ const ROUTES = {
   sighting: sightingDetailView,
   map: mapView,
   nearby: nearbyView,
+  listen: listenView,
   settings: settingsView,
 };
 
 // Which tab a detail screen belongs to, for highlighting.
-const TAB_FOR = { species: 'guide', groups: 'guide', group: 'guide', sighting: 'sightings', map: 'sightings', settings: 'collection' };
+const TAB_FOR = { species: 'guide', groups: 'guide', group: 'guide', sighting: 'sightings', map: 'sightings', listen: 'capture', settings: 'collection' };
 
 function readPref(key, fallback) {
   try {

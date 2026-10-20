@@ -11,7 +11,8 @@ function freshState() {
     step: 'start',          // 'start' | 'pick' | 'confirm'
     file: null,
     previewURL: null,
-    source: null,           // 'camera' | 'library' | 'none' (no photo)
+    source: null,           // 'camera' | 'library' | 'none' (no photo) | 'sound' (BirdNET)
+    soundConfidence: null,
     takenAt: null,
     location: { status: 'none' },
     species: null,
@@ -21,6 +22,10 @@ function freshState() {
   };
 }
 
+// The live capture screen's redraw, so async work started elsewhere (a
+// location fix for a sound sighting) can update it.
+let activeRerender = null;
+
 export function captureView(app) {
   const state = app.viewState('capture', freshState);
   const root = h('section.view.capture');
@@ -28,8 +33,18 @@ export function captureView(app) {
   const rerender = () => {
     root.replaceChildren(...render(app, state, rerender));
   };
+  activeRerender = rerender;
   rerender();
   return root;
+}
+
+/** From "Identify by sound": go straight to saving a sighting of `species`. */
+export function beginSoundSighting(app, species, confidence) {
+  const state = app.viewState('capture', freshState);
+  reset(app, state);
+  Object.assign(state, { step: 'confirm', source: 'sound', species, takenAt: new Date(), soundConfidence: confidence });
+  locate(state, () => activeRerender?.());
+  app.navigate('capture');
 }
 
 function reset(app, state) {
@@ -91,6 +106,7 @@ function startStep(app, state, rerender) {
       h('p.muted', 'Photograph it to add it to your collection — or just log it.'),
       h('label.btn.primary.wide', { for: 'camera-input' }, 'Take photo'), cameraInput,
       h('label.btn.wide', { for: 'library-input' }, 'Choose from photos'), libraryInput,
+      h('a.btn.wide', { href: '#/listen' }, '🎙 Identify by sound'),
       h('button.btn.wide', { type: 'button', onclick: withoutPhoto }, 'Log without a photo'),
       h('p.muted.small', `${have} of ${species.length} ${REGIONS[app.region]?.name ?? ''} species collected`),
     ),
@@ -172,6 +188,8 @@ function confirmStep(app, state, rerender) {
         accuracy: loc?.accuracy ?? null,
         locationSource: loc?.source ?? null,
         notes: state.notes.trim(),
+        identifiedBy: state.source === 'sound' ? 'sound' : null,
+        mlTop: state.source === 'sound' ? { code: s.ebirdCode, confidence: state.soundConfidence } : null,
       });
       const total = app.catalog.species(app.region).length;
       const have = app.catalog.species(app.region).filter((x) => app.store.isCollected(x.ebirdCode)).length;
@@ -189,7 +207,9 @@ function confirmStep(app, state, rerender) {
 
   return [
     h('header.top',
-      h('button.back', { type: 'button', onclick: () => { state.step = 'pick'; rerender(); } }, '‹ Species'),
+      state.source === 'sound'
+        ? h('a.back', { href: '#/listen' }, '‹ Sounds')
+        : h('button.back', { type: 'button', onclick: () => { state.step = 'pick'; rerender(); } }, '‹ Species'),
       h('h1', 'Save sighting')),
     hasPhoto
       ? h('img.preview', { src: state.previewURL, alt: 'Your photo' })
@@ -199,7 +219,9 @@ function confirmStep(app, state, rerender) {
         h('strong', s.commonName), h('em.muted.small', s.scientificName),
         h(`span.pill${isNew ? '.accent' : ''}`, isNew ? '✨ New for your collection!' : 'Already in your collection')),
       h('label.field', h('span.label', 'When'), when),
-      hasPhoto ? null : h('p.muted.small', 'Logged without a photo — the field guide picture stands in for it.'),
+      hasPhoto ? null : h('p.muted.small', state.source === 'sound'
+        ? `Identified by sound with BirdNET (${Math.round((state.soundConfidence ?? 0) * 100)}% confidence).`
+        : 'Logged without a photo — the field guide picture stands in for it.'),
       h('div.field', h('span.label', 'Where'), locationBlock(state, rerender),
         h('span.muted.small', 'Locations are only stored with your sightings, in this browser.')),
       h('label.field', h('span.label', 'Notes'), notes),
