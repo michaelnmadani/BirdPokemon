@@ -64,6 +64,11 @@ jobs:
           </plist>
           PLIST
 
+      - name: Fetch BirdNET model and TensorFlow Lite
+        run: |
+          scripts/birdnet/fetch-model.sh
+          scripts/birdnet/fetch-tflite-ios.sh
+
       - name: Generate project
         run: |
           brew install xcodegen

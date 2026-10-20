@@ -75,6 +75,7 @@ final class FirebaseSightingBackend: SightingBackend {
             mlTopPrediction: draft.mlTopPrediction?.speciesCode,
             mlTopConfidence: draft.mlTopPrediction?.confidence,
             userOverrode: draft.userOverrode,
+            identifiedBy: draft.identifiedBy,
             photoURL: uploaded?.photoURL.absoluteString,
             thumbnailURL: uploaded?.thumbnailURL.absoluteString,
             photoStoragePath: uploaded?.photo.fullPath,

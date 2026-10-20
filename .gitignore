@@ -48,3 +48,4 @@ web/test-results/
 
 # BirdNET model (fetched by scripts/birdnet/fetch-model.sh)
 models/
+Vendor/

@@ -68,7 +68,7 @@ struct SettingsView: View {
 
                 Section("About") {
                     LabeledContent("Version", value: Self.versionString)
-                    Text("Species data from eBird (Cornell Lab of Ornithology). Species photos by iNaturalist contributors, credited on each species page.")
+                    Text("Species data from eBird (Cornell Lab of Ornithology). Species photos by iNaturalist contributors, credited on each species page. Bird calls from xeno-canto and iNaturalist recordists, credited under each player. Sound ID by BirdNET (K. Lisa Yang Center for Conservation Bioacoustics, Cornell Lab of Ornithology & Chemnitz University of Technology), model licensed CC BY-NC-SA 4.0; runs with TensorFlow Lite (Apache 2.0).")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     if !catalog.loadIssues.isEmpty {

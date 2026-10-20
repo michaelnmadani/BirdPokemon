@@ -69,6 +69,7 @@ final class LocalSightingBackend: SightingBackend {
             mlTopPrediction: draft.mlTopPrediction?.speciesCode,
             mlTopConfidence: draft.mlTopPrediction?.confidence,
             userOverrode: draft.userOverrode,
+            identifiedBy: draft.identifiedBy,
             localPhotoFile: photoFile,
             localThumbnailFile: thumbnailFile
         )

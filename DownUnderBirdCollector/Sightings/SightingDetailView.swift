@@ -14,6 +14,11 @@ struct SightingDetailView: View {
         store.sightings.first { $0.id == sightingID }
     }
 
+    static func soundCredit(_ sighting: Sighting) -> String {
+        guard let confidence = sighting.mlTopConfidence, confidence > 0 else { return "Identified by sound with BirdNET" }
+        return "Identified by sound with BirdNET (\(Int((confidence * 100).rounded()))%)"
+    }
+
     var body: some View {
         Group {
             if let sighting {
@@ -49,7 +54,11 @@ struct SightingDetailView: View {
                     Text(sighting.capturedAt.formatted(date: .long, time: .shortened))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                    if store.photoURL(for: sighting) == nil {
+                    if sighting.identifiedBy == .sound {
+                        Label(Self.soundCredit(sighting), systemImage: "waveform")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else if store.photoURL(for: sighting) == nil {
                         Label("Logged without a photo", systemImage: "binoculars")
                             .font(.footnote)
                             .foregroundStyle(.secondary)

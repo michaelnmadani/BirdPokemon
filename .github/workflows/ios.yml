@@ -51,6 +51,19 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Cache BirdNET model and TensorFlow Lite
+        uses: actions/cache@v4
+        with:
+          path: |
+            models/birdnet
+            Vendor
+          key: birdnet-ios-${{ hashFiles('scripts/birdnet/*.sh') }}
+
+      - name: Fetch BirdNET model and TensorFlow Lite
+        run: |
+          scripts/birdnet/fetch-model.sh --example
+          scripts/birdnet/fetch-tflite-ios.sh
+
       - name: Generate project
         run: xcodegen generate
 
@@ -98,7 +111,7 @@ jobs:
       - name: Check app bundle contents
         run: |
           APP=build/dd/Build/Products/Debug-iphonesimulator/DownUnderBirdCollector.app
-          for f in taxonomy_AU.json PrivacyInfo.xcprivacy Assets.car Info.plist; do
+          for f in taxonomy_AU.json groups.json PrivacyInfo.xcprivacy Assets.car Info.plist BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite BirdNET_GLOBAL_6K_V2.4_Labels.txt; do
             test -e "$APP/$f" && echo "found $f" || { echo "::error::$f missing from app bundle"; exit 1; }
           done
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist"

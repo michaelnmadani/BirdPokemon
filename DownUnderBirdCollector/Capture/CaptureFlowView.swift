@@ -7,7 +7,8 @@ import PhotosUI
 struct CaptureFlowView: View {
     private enum Route: Hashable {
         case pickSpecies
-        case confirm(speciesCode: String, prediction: Prediction)
+        case listen
+        case confirm(speciesCode: String, prediction: Prediction, identifiedBy: Sighting.Identification? = nil)
     }
 
     private struct Celebration: Identifiable {
@@ -74,14 +75,21 @@ struct CaptureFlowView: View {
             SpeciesPickerView(region: appState.selectedRegion) { species in
                 path.append(.confirm(speciesCode: species.ebirdCode, prediction: .manual(species)))
             }
-        case .confirm(let code, let prediction):
+        case .listen:
+            ListenView { species, confidence in
+                let heard = Prediction(speciesCode: species.ebirdCode, commonName: species.commonName, confidence: confidence)
+                location.requestPermissionIfNeeded()
+                path.append(.confirm(speciesCode: species.ebirdCode, prediction: heard, identifiedBy: .sound))
+            }
+        case .confirm(let code, let prediction, let identifiedBy):
             // `photo` is nil when logging without one.
             if let species = catalog.species(code: code) {
                 SightingConfirmView(
                     photo: photo,
                     species: species,
                     prediction: prediction,
-                    mlTopPrediction: identify.topPrediction,
+                    mlTopPrediction: identifiedBy == .sound ? prediction : identify.topPrediction,
+                    identifiedBy: identifiedBy,
                     onSaved: finish
                 )
             } else {
@@ -138,6 +146,16 @@ struct CaptureFlowView: View {
                         .frame(maxWidth: .infinity, minHeight: 52)
                 }
                 .buttonStyle(.bordered)
+
+                if SoundIdentifier.isAvailable {
+                    Button {
+                        path.append(.listen)
+                    } label: {
+                        Label("Identify by sound", systemImage: "waveform")
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                    }
+                    .buttonStyle(.bordered)
+                }
 
                 if let importError {
                     Text(importError)

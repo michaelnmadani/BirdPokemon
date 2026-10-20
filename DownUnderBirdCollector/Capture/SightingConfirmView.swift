@@ -7,6 +7,8 @@ struct SightingConfirmView: View {
     let species: Species
     let prediction: Prediction
     let mlTopPrediction: Prediction?
+    /// Set when BirdNET identified the bird from its call.
+    var identifiedBy: Sighting.Identification? = nil
     /// Called with the saved sighting and whether it's the first of its species.
     let onSaved: (Sighting, Bool) -> Void
 
@@ -43,7 +45,9 @@ struct SightingConfirmView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             } footer: {
-                if photo == nil {
+                if identifiedBy == .sound {
+                    Text("Identified by sound with BirdNET (\(prediction.confidencePercent)% confidence). The field guide picture stands in for a photo.")
+                } else if photo == nil {
                     Text("Logged without a photo — the field guide picture stands in for it.")
                 }
             }
@@ -54,7 +58,7 @@ struct SightingConfirmView: View {
                     Text(species.scientificName).italic()
                 }
                 if prediction.confidence > 0 {
-                    LabeledContent("Model confidence", value: "\(prediction.confidencePercent)%")
+                    LabeledContent(identifiedBy == .sound ? "BirdNET confidence" : "Model confidence", value: "\(prediction.confidencePercent)%")
                 }
                 if store.isCaptured(species) {
                     Label("Already in your collection", systemImage: "checkmark.seal")
@@ -180,7 +184,8 @@ struct SightingConfirmView: View {
             photo: photo,
             capturedAt: capturedAt,
             notes: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes,
-            mlTopPrediction: mlTopPrediction
+            mlTopPrediction: mlTopPrediction,
+            identifiedBy: identifiedBy
         )
         if case .found(let coordinate, let accuracy, let source) = locationState {
             draft.coordinate = coordinate

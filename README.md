@@ -33,6 +33,8 @@ phone or computer before the iOS build is on your device.
 
 ```sh
 brew install xcodegen
+scripts/birdnet/fetch-model.sh        # BirdNET sound-ID model (52 MB, not in git)
+scripts/birdnet/fetch-tflite-ios.sh   # TensorFlow Lite runtime it runs on
 xcodegen generate
 open DownUnderBirdCollector.xcodeproj
 ```
@@ -64,7 +66,7 @@ testing on a phone.
 | `web/` | Offline web app (no framework, no runtime dependencies) |
 | `scripts/seed-ebird/` | Node scripts that maintain the species data |
 | `scripts/train-model/` | Create ML script to train the bird-identification model |
-| `scripts/birdnet/` | Fetches the BirdNET sound-ID model into `models/birdnet/` (not in git) |
+| `scripts/birdnet/` | Fetch the BirdNET sound-ID model (`models/birdnet/`) and the iOS TensorFlow Lite runtime (`Vendor/`) — neither is in git |
 | `project.yml`, `Config/` | XcodeGen project definition and build settings |
 | `.github/workflows/` | CI for iOS and web, TestFlight upload, photo fetching |
 
