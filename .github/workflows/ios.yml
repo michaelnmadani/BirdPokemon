@@ -63,6 +63,7 @@ jobs:
         run: |
           scripts/birdnet/fetch-model.sh --example
           scripts/birdnet/fetch-tflite-ios.sh
+          test -d Vendor/TensorFlowLiteC.xcframework
 
       - name: Generate project
         run: xcodegen generate
@@ -136,7 +137,7 @@ jobs:
       - name: Show compiler errors
         if: failure()
         run: |
-          cat build/*.log 2>/dev/null | grep -E ': (error|warning: .*isolat)' | sort -u | head -150 || true
+          cat build/*.log 2>/dev/null | grep -E '(error:|: warning: .*isolat)' | sort -u | head -150 || true
 
       - name: Upload logs
         if: always()

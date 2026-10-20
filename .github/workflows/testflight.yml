@@ -68,6 +68,7 @@ jobs:
         run: |
           scripts/birdnet/fetch-model.sh
           scripts/birdnet/fetch-tflite-ios.sh
+          test -d Vendor/TensorFlowLiteC.xcframework
 
       - name: Generate project
         run: |

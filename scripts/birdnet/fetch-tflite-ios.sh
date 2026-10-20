@@ -24,8 +24,8 @@ if [[ -f "$OUT/.tflite-version" && "$(cat "$OUT/.tflite-version")" == "$VERSION"
 fi
 
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
-echo "Downloading TensorFlowLiteC $VERSION…"
+trap 'rc=$?; rm -rf "$TMP"; exit $rc' EXIT
+echo "Downloading TensorFlowLiteC ${VERSION}…"
 curl -fsSL "$URL" -o "$TMP/tflite.tar.gz"
 ACTUAL="$(sha256 "$TMP/tflite.tar.gz")"
 if [[ -n "$SHA" && "$ACTUAL" != "$SHA" ]]; then

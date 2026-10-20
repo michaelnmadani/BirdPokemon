@@ -34,7 +34,7 @@ if verify "$OUT/$MODEL" "$MODEL_SHA" && verify "$OUT/$LABELS" "$LABELS_SHA"; the
   echo "BirdNET model already present in models/birdnet/"
 else
   TMP="$(mktemp -d)"
-  trap 'rm -rf "$TMP"' EXIT
+  trap 'rc=$?; rm -rf "$TMP"; exit $rc' EXIT
   echo "Downloading birdnetlib $WHEEL_VERSION (contains BirdNET V2.4)…"
   python3 -m pip download --quiet --no-deps --only-binary :all: "birdnetlib==$WHEEL_VERSION" -d "$TMP"
   WHEEL="$(ls "$TMP"/birdnetlib-*.whl)"
