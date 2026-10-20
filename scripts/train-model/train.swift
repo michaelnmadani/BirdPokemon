@@ -41,7 +41,7 @@ let parameters = MLImageClassifier.ModelParameters(
     validation: .split(strategy: .automatic),
     maxIterations: 40,
     augmentation: [.flip, .crop, .rotation, .exposure],
-    algorithm: .transferLearning(featureExtractor: .scenePrint(revision: 2), classifierType: .logisticRegressor)
+    algorithm: .transferLearning(featureExtractor: .scenePrint(revision: 2), classifier: .logisticRegressor)
 )
 let classifier = try MLImageClassifier(trainingData: .filesByLabel(files), parameters: parameters)
 
