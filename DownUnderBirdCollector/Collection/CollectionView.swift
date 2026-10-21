@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// The collector's album: one card per species in the region. Collected
-/// species show your own photo; the rest stay hidden until you find them.
+/// species show your own photo; the rest show the field guide photo in
+/// greyscale until you find them. Can be grouped and resized.
 struct CollectionView: View {
     enum Show: String, CaseIterable, Identifiable {
         case all = "All"
@@ -16,8 +17,17 @@ struct CollectionView: View {
     @StateObject private var filterState = FilterState()
     @State private var show: Show = .all
     @State private var showSettings = false
+    @AppStorage("collection.groupBy") private var grouping: CollectionGrouping = .none
+    @AppStorage("collection.gridSize") private var gridSize: CollectionGridSize = .medium
 
-    private let gridColumns = [GridItem(.adaptive(minimum: 104), spacing: 12)]
+    private var gridColumns: [GridItem] {
+        [GridItem(.adaptive(minimum: gridSize.minimumWidth), spacing: gridSize == .small ? 8 : 12)]
+    }
+
+    private var sections: [CollectionSection] {
+        let groups = grouping == .group ? catalog.groups(in: appState.selectedRegion) : []
+        return CollectionSections.build(entries, by: grouping, groups: groups)
+    }
 
     private var regionSpecies: [Species] {
         catalog.species(in: appState.selectedRegion)
@@ -47,16 +57,25 @@ struct CollectionView: View {
 
                     FilterBarView(state: filterState, resultCount: entries.count)
 
+                    gridOptions
+
                     LazyVGrid(columns: gridColumns, spacing: 14) {
-                        ForEach(entries) { species in
-                            NavigationLink(value: species) {
-                                CollectionCell(
-                                    species: species,
-                                    isCaptured: store.isCaptured(species),
-                                    myPhoto: store.latestSighting(of: species.ebirdCode).flatMap(store.thumbnailURL(for:))
-                                )
+                        ForEach(entries.isEmpty ? [] : sections) { section in
+                            Section {
+                                ForEach(section.species) { species in
+                                    NavigationLink(value: species) {
+                                        CollectionCell(
+                                            species: species,
+                                            isCaptured: store.isCaptured(species),
+                                            myPhoto: store.latestSighting(of: species.ebirdCode).flatMap(store.thumbnailURL(for:)),
+                                            compact: gridSize == .small
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            } header: {
+                                if section.title != nil { sectionHeader(section) }
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal)
@@ -97,6 +116,49 @@ struct CollectionView: View {
         }
     }
 
+    private var gridOptions: some View {
+        HStack {
+            Menu {
+                Picker("Group by", selection: $grouping) {
+                    ForEach(CollectionGrouping.allCases) { Text($0.label).tag($0) }
+                }
+            } label: {
+                Label(grouping == .none ? "Group by" : "Grouped by \(grouping.label.lowercased())",
+                      systemImage: "square.grid.3x1.below.line.grid.1x2")
+                    .font(.subheadline)
+            }
+            Spacer()
+            Picker("Picture size", selection: $gridSize) {
+                ForEach(CollectionGridSize.allCases) { size in
+                    Text(size.label).tag(size).accessibilityLabel("\(size.rawValue) pictures")
+                }
+            }
+            .pickerStyle(.segmented)
+            .fixedSize()
+        }
+        .padding(.horizontal)
+    }
+
+    private func sectionHeader(_ section: CollectionSection) -> some View {
+        let have = section.species.filter(store.isCaptured).count
+        return HStack(spacing: 8) {
+            if let emoji = section.emoji { Text(emoji) }
+            if let swatch = section.swatch {
+                Circle()
+                    .fill(swatch.swiftUIColor)
+                    .overlay(Circle().stroke(.secondary.opacity(0.4)))
+                    .frame(width: 14, height: 14)
+            }
+            Text(section.title ?? "").font(.headline)
+            Spacer()
+            Text("\(have) / \(section.species.count)")
+                .font(.subheadline.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+        .padding(.top, 10)
+        .accessibilityElement(children: .combine)
+    }
+
     private var header: some View {
         let have = regionSpecies.filter(store.isCaptured).count
         let total = regionSpecies.count
@@ -120,31 +182,38 @@ private struct CollectionCell: View {
     let species: Species
     let isCaptured: Bool
     let myPhoto: URL?
+    var compact = false
 
     var body: some View {
         VStack(spacing: 6) {
-            ZStack {
-                AsyncRemoteImage(url: isCaptured ? (myPhoto ?? species.thumbnail) : species.thumbnail)
-                    .frame(height: 104)
-                    .frame(maxWidth: .infinity)
-                    .blur(radius: isCaptured ? 0 : 10)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                if isCaptured {
-                    CapturedBadgeView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                        .padding(6)
-                } else {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.black.opacity(0.55))
-                    Image(systemName: "questionmark")
-                        .font(.title.bold())
-                        .foregroundStyle(.white)
+            Color.clear
+                .aspectRatio(1, contentMode: .fit)
+                .overlay {
+                    // Not collected yet: the field guide photo in greyscale.
+                    AsyncRemoteImage(url: isCaptured ? (myPhoto ?? species.thumbnail) : species.thumbnail)
+                        .grayscale(isCaptured ? 0 : 1)
+                        .opacity(isCaptured ? 1 : 0.85)
                 }
-            }
-            .frame(height: 104)
+                .clipShape(RoundedRectangle(cornerRadius: compact ? 10 : 12))
+                .overlay(alignment: .topTrailing) {
+                    Group {
+                        if isCaptured {
+                            CapturedBadgeView()
+                        } else {
+                            Image(systemName: "questionmark")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.white)
+                                .frame(width: 22, height: 22)
+                                .background(Circle().fill(.black.opacity(0.55)))
+                                .overlay(Circle().stroke(.white, lineWidth: 1.5))
+                        }
+                    }
+                    .scaleEffect(compact ? 0.8 : 1)
+                    .padding(compact ? 3 : 6)
+                }
 
             Text(species.commonName)
-                .font(.caption.weight(.medium))
+                .font(compact ? .caption2.weight(.medium) : .caption.weight(.medium))
                 .lineLimit(2, reservesSpace: true)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(isCaptured ? .primary : .secondary)
