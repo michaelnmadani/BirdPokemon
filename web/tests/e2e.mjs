@@ -81,6 +81,28 @@ try {
     assert.equal(await page.locator('.card').count(), 500);
   });
 
+  await step('Collection shows uncollected birds in greyscale, groups them, and resizes', async () => {
+    const filter = await page.locator('.card.hidden .card-img img').first().evaluate((img) => getComputedStyle(img).filter);
+    assert.match(filter, /grayscale\(1\)/);
+    await page.getByLabel('Group by').selectOption('group');
+    await page.locator('.section-head', { hasText: 'Flightless birds' }).getByText('0 / 3').waitFor();
+    assert.equal(await page.locator('.card').count(), 500, 'every bird still shown once');
+    await page.getByLabel('Group by').selectOption('size');
+    await page.locator('.section-head', { hasText: 'Huge' }).waitFor();
+    await page.getByLabel('Group by').selectOption('colour');
+    await page.locator('.section-head', { hasText: 'Grey' }).waitFor();
+    const before = (await page.locator('.card').first().boundingBox()).width;
+    await page.getByRole('radio', { name: 'large pictures' }).click();
+    const after = (await page.locator('.card').first().boundingBox()).width;
+    assert.ok(after > before * 1.2, `large cards (${after}px) should be wider than medium (${before}px)`);
+    // Remembered for next time (a reload here would bypass this test's data fixtures).
+    assert.deepEqual(await page.evaluate(() => [localStorage.getItem('collection.groupBy'), localStorage.getItem('collection.gridSize')]),
+      ['colour', 'large']);
+    await page.getByLabel('Group by').selectOption('none');
+    await page.getByRole('radio', { name: 'medium pictures' }).click();
+    assert.equal(await page.locator('.section-head').count(), 0);
+  });
+
   await step('Field guide search', async () => {
     await go('Field Guide');
     await page.getByRole('searchbox').fill('kookaburra');

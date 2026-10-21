@@ -4,8 +4,9 @@ An iPhone app that turns birdwatching into a collection game. Photograph a
 bird, identify it, and it joins your collection with the date and place you
 saw it. Fill the album one species at a time — 500 Australian birds to find.
 
-- **Collection** — every species as a card; the ones you haven't found stay
-  hidden until you photograph them.
+- **Collection** — every species as a card; the ones you haven't found yet
+  show in greyscale until you photograph them. Choose small, medium or large
+  pictures, and group the album by bird group, family, size or colour.
 - **Field Guide** — search and filter all 500 species by size, colour and
   family, or browse by group (flightless birds, parrots & cockatoos, birds of
   prey, …) and by genus (rosellas, kookaburras, fairywrens, …). Photos are

@@ -1,4 +1,5 @@
 import { REGIONS, emptyCriteria, matches } from '../model.js';
+import { GRID_SIZES, GROUPINGS, sections } from '../sections.js';
 import { h, sightingPicture, speciesImage } from '../ui.js';
 import { filterBar } from './filters.js';
 
@@ -8,14 +9,37 @@ const SHOW = [
   { id: 'missing', label: 'To find' },
 ];
 
+// Grouping and card size are remembered in this browser.
+function readPref(key, allowed, fallback) {
+  try {
+    const value = localStorage.getItem(key);
+    return allowed.some((o) => o.id === value) ? value : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writePref(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Private mode etc. — just won't persist.
+  }
+}
+
 export function collectionView(app) {
-  const state = app.viewState('collection', () => ({ criteria: emptyCriteria(), show: 'all' }));
+  const state = app.viewState('collection', () => ({
+    criteria: emptyCriteria(),
+    show: 'all',
+    groupBy: readPref('collection.groupBy', GROUPINGS, 'none'),
+    gridSize: readPref('collection.gridSize', GRID_SIZES, 'medium'),
+  }));
   const { store } = app;
   const species = app.catalog.species(app.region);
   const have = species.filter((s) => store.isCollected(s.ebirdCode)).length;
   const region = REGIONS[app.region] ?? { name: app.region, flag: '' };
 
-  const grid = h('div.grid');
+  const results = h('div.results');
   const empty = h('p.empty');
   const bar = filterBar(state.criteria, species, renderGrid, 'Search your collection');
 
@@ -29,6 +53,32 @@ export function collectionView(app) {
       },
     }, opt.label)));
 
+  const groupSelect = h('select', { 'aria-label': 'Group by' },
+    GROUPINGS.map((g) => h('option', { value: g.id, selected: g.id === state.groupBy }, g.label)));
+  groupSelect.addEventListener('change', () => {
+    state.groupBy = groupSelect.value;
+    writePref('collection.groupBy', state.groupBy);
+    renderGrid();
+  });
+
+  const sizePicker = h('div.size-picker', { role: 'radiogroup', 'aria-label': 'Picture size' }, GRID_SIZES.map((z) =>
+    h('button', {
+      type: 'button', role: 'radio', 'aria-checked': String(state.gridSize === z.id), 'aria-label': `${z.id} pictures`,
+      onclick: () => {
+        state.gridSize = z.id;
+        writePref('collection.gridSize', z.id);
+        sizePicker.querySelectorAll('button').forEach((b, i) => b.setAttribute('aria-checked', String(GRID_SIZES[i].id === z.id)));
+        applySize();
+      },
+    }, z.label)));
+
+  function applySize() {
+    const size = GRID_SIZES.find((z) => z.id === state.gridSize) ?? GRID_SIZES[1];
+    results.style.setProperty('--card-min', `${size.min}px`);
+    results.dataset.size = size.id;
+  }
+  applySize();
+
   function renderGrid() {
     const entries = species.filter((s) => {
       if (!matches(state.criteria, s)) return false;
@@ -36,7 +86,11 @@ export function collectionView(app) {
       return state.show === 'all' || (state.show === 'collected' ? collected : !collected);
     });
     bar.update(entries.length);
-    grid.replaceChildren(...entries.map((s) => card(app, s)));
+    const groups = state.groupBy === 'group' ? app.catalog.groupsFor(app.region).groups : [];
+    results.replaceChildren(...(entries.length ? sections(entries, state.groupBy, groups) : []).map((section) => [
+      section.title ? sectionHeader(section, store) : null,
+      h('div.grid', section.species.map((s) => card(app, s))),
+    ]).flat().filter(Boolean));
     empty.textContent = entries.length ? '' : (state.show === 'collected'
       ? 'Nothing collected yet — head to Capture and photograph your first bird.'
       : 'No species match. Try clearing filters.');
@@ -54,9 +108,22 @@ export function collectionView(app) {
     ),
     segmented,
     bar.node,
-    grid,
+    h('div.row.grid-options',
+      h('label.group-by', h('span.muted.small', 'Group by'), groupSelect),
+      h('span.spacer'),
+      sizePicker),
+    results,
     empty,
   );
+}
+
+function sectionHeader(section, store) {
+  const have = section.species.filter((s) => store.isCollected(s.ebirdCode)).length;
+  return h('h2.section-head',
+    section.emoji ? h('span', { 'aria-hidden': 'true' }, section.emoji) : null,
+    section.swatch ? h('span.swatch', { style: { background: section.swatch }, 'aria-hidden': 'true' }) : null,
+    h('span.section-title', section.title),
+    h('span.muted.small', `${have} / ${section.species.length}`));
 }
 
 function card(app, species) {
