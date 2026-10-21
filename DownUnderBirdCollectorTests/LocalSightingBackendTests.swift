@@ -55,6 +55,25 @@ final class LocalSightingBackendTests: XCTestCase {
         XCTAssertNil(saved.latitude)
     }
 
+    func testSightingWithoutPhotoStoresNoFilesButCollectsSpecies() async throws {
+        let store = SightingStore(backend: LocalSightingBackend(directory: directory))
+        var value = draft(code: "emu1", coordinate: CLLocationCoordinate2D(latitude: -27.47, longitude: 153.02))
+        value.photo = nil
+
+        let saved = try await store.add(value)
+
+        XCTAssertNil(saved.localPhotoFile)
+        XCTAssertNil(store.photoURL(for: saved))
+        XCTAssertNil(store.thumbnailURL(for: saved))
+        XCTAssertTrue(store.capturedCodes.contains("emu1"))
+        XCTAssertEqual(saved.locationSource, .device)
+        let photos = directory.appendingPathComponent("Photos")
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: photos.path), [])
+
+        await store.delete(ids: [saved.id])
+        XCTAssertTrue(store.sightings.isEmpty)
+    }
+
     func testDeleteRemovesFilesAndUncollectsSpecies() async throws {
         let store = SightingStore(backend: LocalSightingBackend(directory: directory))
         let first = try await store.add(draft(code: "laukoo1"))

@@ -22,7 +22,7 @@ struct MainTabView: View {
     @State private var selection: Tab = .capture
 
     enum Tab: Hashable {
-        case collection, catalog, capture, sightings, map
+        case collection, catalog, capture, nearby, sightings
     }
 
     var body: some View {
@@ -39,13 +39,13 @@ struct MainTabView: View {
                 .tabItem { Label("Capture", systemImage: "camera.viewfinder") }
                 .tag(Tab.capture)
 
+            NearbyView()
+                .tabItem { Label("Nearby", systemImage: "mappin.and.ellipse") }
+                .tag(Tab.nearby)
+
             SightingsListView()
                 .tabItem { Label("Sightings", systemImage: "list.bullet") }
                 .tag(Tab.sightings)
-
-            SightingsMapView()
-                .tabItem { Label("Map", systemImage: "map") }
-                .tag(Tab.map)
         }
     }
 }

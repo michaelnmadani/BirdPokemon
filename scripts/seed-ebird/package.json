@@ -15,7 +15,8 @@
     "seed": "tsx seed.ts",
     "fetch-images": "tsx fetch-inat-images.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test lib/lib.test.ts"
+    "test": "tsx --test lib/lib.test.ts",
+    "fetch-calls": "tsx fetch-calls.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

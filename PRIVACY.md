@@ -20,6 +20,9 @@ that receive it, and we can't see it.
 - **Camera**: used only to take photos of birds when you tap the shutter.
 - **Location (while using the app)**: used only to attach a location to a
   sighting you're saving. You can save sightings without a location.
+- **Microphone**: used only while you're on *Identify by sound* and have
+  tapped *Start listening*. Audio is analysed on your device by BirdNET and
+  is never recorded, saved or uploaded.
 - **Photos**: when you pick a photo from your library, the app reads only
   the photo you chose, including its date and location if it has them.
 
@@ -29,7 +32,15 @@ Species names come from eBird and species photos from iNaturalist. These are
 bundled with the app or loaded from iNaturalist's image servers when you
 browse the field guide; loading an image tells those servers your IP
 address, as any web image does. The app doesn't send them anything about
-you or your sightings.
+you or your sightings. Bird calls stream from xeno-canto or iNaturalist only
+when you press play, in the same way.
+
+## Nearby birds (eBird)
+
+If you add an eBird API key, the Nearby tab asks eBird (Cornell Lab of
+Ornithology) for birds reported near you. That request includes your
+location rounded to about 1 km and your API key — nothing about your
+sightings. Without a key, nothing is sent.
 
 ## What we don't do
 

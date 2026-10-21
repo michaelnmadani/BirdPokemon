@@ -4,32 +4,39 @@ import { h, toast } from './ui.js';
 import { collectionView } from './views/collection.js';
 import { guideView } from './views/guide.js';
 import { speciesView } from './views/species.js';
+import { groupView, groupsView } from './views/groups.js';
 import { captureView } from './views/capture.js';
 import { sightingsView, sightingDetailView } from './views/sightings.js';
 import { mapView } from './views/map.js';
+import { nearbyView } from './views/nearby.js';
+import { listenView } from './views/listen.js';
 import { settingsView } from './views/settings.js';
 
 const TABS = [
   { route: 'collection', label: 'Collection', icon: 'grid' },
   { route: 'guide', label: 'Field Guide', icon: 'book' },
   { route: 'capture', label: 'Capture', icon: 'camera' },
+  { route: 'nearby', label: 'Nearby', icon: 'pin' },
   { route: 'sightings', label: 'Sightings', icon: 'list' },
-  { route: 'map', label: 'Map', icon: 'map' },
 ];
 
 const ROUTES = {
   collection: collectionView,
   guide: guideView,
   species: speciesView,
+  groups: groupsView,
+  group: groupView,
   capture: captureView,
   sightings: sightingsView,
   sighting: sightingDetailView,
   map: mapView,
+  nearby: nearbyView,
+  listen: listenView,
   settings: settingsView,
 };
 
 // Which tab a detail screen belongs to, for highlighting.
-const TAB_FOR = { species: 'guide', sighting: 'sightings', settings: 'collection' };
+const TAB_FOR = { species: 'guide', groups: 'guide', group: 'guide', sighting: 'sightings', map: 'sightings', listen: 'capture', settings: 'collection' };
 
 function readPref(key, fallback) {
   try {

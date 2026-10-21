@@ -79,7 +79,10 @@ invite for your Apple ID (App Store Connect → TestFlight → Internal Testing)
   starting point; publish it (e.g. with GitHub Pages) and paste the URL into
   App Store Connect.
 - **App Privacy** answers: with the default on-device storage the app
-  collects **no data** ("Data Not Collected"). If you turn on Firebase sync,
+  collects **no data** ("Data Not Collected"). The optional Nearby/eBird
+  lookup sends a location rounded to ~1 km to eBird only when someone enters
+  their own API key; if you ship a built-in key (`EBIRD_API_KEY`), declare
+  Coarse Location (not linked to the user, not used for tracking). If you turn on Firebase sync,
   declare Photos, Precise Location, Email Address and User ID (linked to the
   user, not used for tracking), and add them to
   `DownUnderBirdCollector/Supporting/PrivacyInfo.xcprivacy`.
@@ -87,9 +90,15 @@ invite for your Apple ID (App Store Connect → TestFlight → Internal Testing)
   the app in the iPhone 17 Pro Max simulator and press ⌘S.
 - **Category**: Education (already set in Info.plist). Age rating: 4+.
 - **Encryption**: already declared as none (`ITSAppUsesNonExemptEncryption`).
-- **Licensing**: eBird data and many iNaturalist photos (CC BY-NC) are
-  licensed for **non-commercial** use, so keep the app free with no ads or
-  in-app purchases unless you replace those sources.
+- **Microphone**: sound ID analyses audio on the device and never stores
+  or sends it, so it doesn't count as collected data. The permission prompt
+  text is in `project.yml` (`NSMicrophoneUsageDescription`).
+- **Licensing**: eBird data, many iNaturalist photos (CC BY-NC) and the
+  BirdNET model (CC BY-NC-SA 4.0) are licensed for **non-commercial** use,
+  so keep the app free with no ads or in-app purchases unless you replace
+  those sources (or get a commercial licence for BirdNET from the Cornell
+  Lab). BirdNET is credited in Settings → About; keep that credit.
+- **App size**: the bundled BirdNET model adds about 52 MB.
 - **Home-screen name**: iOS shows about 12 characters under the icon, so
   "Down Under Bird Collector" appears as "Down Under B…". The App Store name
   can stay in full; to show something shorter on the home screen, change

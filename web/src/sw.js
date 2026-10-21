@@ -5,6 +5,7 @@
 const VERSION = '__VERSION__';
 const APP_CACHE = `app-${VERSION}`;
 const PHOTO_CACHE = 'species-photos';
+const BIRDNET_CACHE = 'birdnet-v2.4'; // same name as js/soundid.js
 const PRECACHE = __PRECACHE__;
 const PHOTO_HOSTS = ['inaturalist-open-data.s3.amazonaws.com', 'static.inaturalist.org'];
 
@@ -26,12 +27,15 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
 
-  if (url.origin === self.location.origin) {
+  if (url.origin === self.location.origin && /\/(models\/birdnet|vendor\/litert)\//.test(url.pathname)) {
+    event.respondWith(onDemand(request));
+  } else if (url.origin === self.location.origin) {
     event.respondWith(appShell(request));
-  } else if (PHOTO_HOSTS.includes(url.hostname)) {
+  } else if (PHOTO_HOSTS.includes(url.hostname) && request.destination === 'image') {
+    // Only photos: audio uses range requests that a cached full response would break.
     event.respondWith(speciesPhoto(request));
   }
-  // Everything else (map tiles, eBird links) goes straight to the network.
+  // Everything else (bird calls, map tiles, eBird) goes straight to the network.
 });
 
 async function appShell(request) {
@@ -47,6 +51,16 @@ async function appShell(request) {
     }
     throw err;
   }
+}
+
+// Sound ID runtime and model: cached the first time they're used.
+async function onDemand(request) {
+  const cache = await caches.open(BIRDNET_CACHE);
+  const cached = await cache.match(request.url);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok && request.method === 'GET') cache.put(request.url, response.clone());
+  return response;
 }
 
 async function speciesPhoto(request) {

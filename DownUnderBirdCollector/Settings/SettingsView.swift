@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var confirmDelete = false
     @State private var isDeleting = false
     @State private var message: String?
+    @AppStorage(EBirdClient.apiKeyDefaultsKey) private var ebirdKey = ""
 
     var body: some View {
         NavigationStack {
@@ -50,13 +51,24 @@ struct SettingsView: View {
                          : "Sightings sync to your account so they're available on any device you sign in on.")
                 }
 
+                Section {
+                    SecureField("eBird API key", text: $ebirdKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    Link("Get a free key at ebird.org", destination: URL(string: "https://ebird.org/api/keygen")!)
+                } header: {
+                    Text("Nearby birds (eBird)")
+                } footer: {
+                    Text("Lets the Nearby tab include what other birdwatchers reported within 5 km in the last 30 days. Stored only on this iPhone.")
+                }
+
                 if let message {
                     Section { Text(message).font(.footnote) }
                 }
 
                 Section("About") {
                     LabeledContent("Version", value: Self.versionString)
-                    Text("Species data from eBird (Cornell Lab of Ornithology). Species photos by iNaturalist contributors, credited on each species page.")
+                    Text("Species data from eBird (Cornell Lab of Ornithology). Species photos by iNaturalist contributors, credited on each species page. Bird calls from xeno-canto and iNaturalist recordists, credited under each player. Sound ID by BirdNET (K. Lisa Yang Center for Conservation Bioacoustics, Cornell Lab of Ornithology & Chemnitz University of Technology), model licensed CC BY-NC-SA 4.0; runs with TensorFlow Lite (Apache 2.0).")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     if !catalog.loadIssues.isEmpty {

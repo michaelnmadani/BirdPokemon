@@ -17,6 +17,12 @@ struct Species: Identifiable, Hashable {
     let thumbnailURL: String?
     let thumbnailAttribution: String?
     let thumbnailLicense: String?
+    /// A recording of its call or song ("Hear its call").
+    var callURL: String? = nil
+    var callAttribution: String? = nil
+    var callLicense: String? = nil
+    var callSource: String? = nil
+    var callPageURL: String? = nil
     let wikipediaURL: String?
     let ebirdURL: String
 
@@ -36,6 +42,16 @@ struct Species: Identifiable, Hashable {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
+    var call: URL? { callURL.flatMap(URL.init(string:)) }
+
+    /// "© Jane Doe · CC BY-NC via xeno-canto"
+    var callCredit: String? {
+        guard callURL != nil else { return nil }
+        let source = ["xeno-canto": "xeno-canto", "inaturalist": "iNaturalist"][callSource ?? ""] ?? "the web"
+        let parts = [callAttribution, callLicense.map(Self.licenceLabel)].compactMap { $0 }
+        return "\(parts.isEmpty ? "Recording" : parts.joined(separator: " · ")) via \(source)"
+    }
+
     /// "cc-by-nc" -> "CC BY-NC", "cc0" -> "CC0".
     static func licenceLabel(_ code: String) -> String {
         code.uppercased().replacingOccurrences(of: "CC-", with: "CC ")
@@ -47,6 +63,7 @@ extension Species: Decodable {
         case ebirdCode, commonName, scientificName, order, family, familyCommonName, category
         case sizeCategory, primaryColors, regionCodes
         case thumbnailURL, thumbnailAttribution, thumbnailLicense, wikipediaURL, ebirdURL
+        case callURL, callAttribution, callLicense, callSource, callPageURL
     }
 
     /// Lenient on everything except identity: unknown colours are folded or
@@ -77,6 +94,11 @@ extension Species: Decodable {
         thumbnailURL = try c.decodeIfPresent(String.self, forKey: .thumbnailURL)
         thumbnailAttribution = try c.decodeIfPresent(String.self, forKey: .thumbnailAttribution)
         thumbnailLicense = try c.decodeIfPresent(String.self, forKey: .thumbnailLicense)
+        callURL = try c.decodeIfPresent(String.self, forKey: .callURL)
+        callAttribution = try c.decodeIfPresent(String.self, forKey: .callAttribution)
+        callLicense = try c.decodeIfPresent(String.self, forKey: .callLicense)
+        callSource = try c.decodeIfPresent(String.self, forKey: .callSource)
+        callPageURL = try c.decodeIfPresent(String.self, forKey: .callPageURL)
         wikipediaURL = try c.decodeIfPresent(String.self, forKey: .wikipediaURL)
         ebirdURL = try c.decodeIfPresent(String.self, forKey: .ebirdURL)
             ?? "https://ebird.org/species/\(ebirdCode)"

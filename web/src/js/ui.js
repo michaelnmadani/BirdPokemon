@@ -47,6 +47,14 @@ export function sightingImage(store, id, kind = 'thumb', className = 'thumb') {
   return wrap;
 }
 
+/** A sighting's own photo, or the species' field-guide picture if it was logged without one. */
+export function sightingPicture(app, sighting, kind = 'thumb', className = 'thumb') {
+  if (sighting.hasPhoto === false) {
+    return speciesImage(app.catalog.get(sighting.speciesCode)?.thumbnailURL, sighting.speciesCommonName, className);
+  }
+  return sightingImage(app.store, sighting.id, kind, className);
+}
+
 export function colorDot(hex, label, size = 10) {
   return h('span.dot', { title: label, 'aria-label': label, style: { background: hex, width: `${size}px`, height: `${size}px` } });
 }

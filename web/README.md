@@ -2,7 +2,8 @@
 
 A test version of the app that runs in any modern browser and works fully
 offline after the first visit. It has the same screens as the iOS app
-(Collection, Field Guide, Capture, Sightings, Map, Settings) and reads the
+(Collection, Field Guide with bird groups, Capture, Nearby, Sightings with a
+map, Settings) and reads the
 same species data.
 
 Differences from iOS: the species is always chosen by hand (no on-device
@@ -13,9 +14,15 @@ the app.
 
 ```sh
 cd web
-npm install      # dev-only: Leaflet (copied into the build) and Playwright
+npm install      # dev-only: Leaflet + LiteRT.js (copied into the build) and Playwright
 npm start        # builds to web/dist and serves http://localhost:5173
 ```
+
+Sound ID needs the BirdNET model, which isn't in git. Fetch it once with
+`../scripts/birdnet/fetch-model.sh` (needs Python 3 and pip); without it the
+build still works and the *Identify by sound* screen says it isn't included.
+The model (52 MB) is not precached: the app downloads it the first time you
+use sound ID and keeps it for offline use.
 
 No framework and no runtime dependencies: `web/dist` is plain static files
 you can host anywhere.
@@ -39,9 +46,11 @@ going bush.
 ## Tests
 
 ```sh
-npm test         # unit tests: species model, filters, EXIF reader
+npm test         # unit tests: species model, filters, groups, nearby, sound ID helpers
 npm run e2e      # builds, then drives headless Chromium through browsing,
-                 # two captures (photo GPS + live GPS), offline reload, delete
+                 # two captures (photo GPS + live GPS), offline reload, delete,
+                 # Nearby, and BirdNET on its example recording (if fetched with
+                 # ../scripts/birdnet/fetch-model.sh --example)
 SCREENSHOTS=1 npm run e2e   # also saves screenshots to web/test-results/
 ```
 
@@ -55,5 +64,6 @@ SCREENSHOTS=1 npm run e2e   # also saves screenshots to web/test-results/
 | `src/js/store.js` | Sightings + photos in IndexedDB |
 | `src/js/exif.js`, `src/js/images.js` | Photo date/GPS and resizing |
 | `src/js/views/` | One file per screen |
-| `src/sw.js` | Service worker: precaches the app, caches species photos |
+| `src/js/soundid.js`, `soundid-core.js`, `mic-worklet.js` | BirdNET sound ID: model loading, microphone, scoring |
+| `src/sw.js` | Service worker: precaches the app, caches species photos and (on first use) the sound model |
 | `scripts/build.mjs` | Copies species data + Leaflet, stamps the service worker |

@@ -1,9 +1,9 @@
 // Map of sightings using a vendored copy of Leaflet (cached for offline use).
 // Map tiles come from OpenStreetMap and need a connection; pins always show.
-import { formatDate, h } from '../ui.js';
+import { backButton, formatDate, h } from '../ui.js';
 
 let leafletPromise;
-function loadLeaflet() {
+export function loadLeaflet() {
   leafletPromise ??= new Promise((resolve, reject) => {
     if (window.L) return resolve(window.L);
     const script = document.createElement('script');
@@ -17,7 +17,7 @@ function loadLeaflet() {
 
 const AUSTRALIA = [[-43.8, 112.9], [-10.5, 153.8]];
 
-function baseMap(L, el) {
+export function baseMap(L, el) {
   const map = L.map(el, { zoomControl: true, attributionControl: true });
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
@@ -26,7 +26,7 @@ function baseMap(L, el) {
   return map;
 }
 
-function birdIcon(L) {
+export function birdIcon(L) {
   return L.divIcon({ className: 'pin', html: '<span>🐦</span>', iconSize: [32, 32], iconAnchor: [16, 30], popupAnchor: [0, -26] });
 }
 
@@ -70,7 +70,7 @@ export function mapView(app) {
   });
 
   return {
-    node: h('section.view.mapview', h('header.top', h('h1', 'Map'), h('span.muted.small', `${located.length} pinned`)), holder, note),
+    node: h('section.view.mapview', h('header.top', backButton(app, 'sightings', 'Sightings'), h('h1', 'Map'), h('span.muted.small', `${located.length} pinned`)), holder, note),
     cleanup: () => map?.remove(),
   };
 }

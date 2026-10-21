@@ -9,6 +9,10 @@ struct Sighting: Identifiable, Codable, Hashable {
         case photo    // read from the photo's own metadata
     }
 
+    enum Identification: String, Codable {
+        case sound    // BirdNET recognised its call
+    }
+
     var id: String
     var userId: String
 
@@ -29,6 +33,8 @@ struct Sighting: Identifiable, Codable, Hashable {
     var mlTopPrediction: String?
     var mlTopConfidence: Double?
     var userOverrode: Bool
+    /// How the species was identified, when it wasn't by eye or photo.
+    var identifiedBy: Identification? = nil
 
     // On-device copies (file names inside the store's photo folder).
     var localPhotoFile: String?
@@ -49,13 +55,15 @@ struct Sighting: Identifiable, Codable, Hashable {
 /// Everything needed to create a sighting; the store assigns ids and files.
 struct SightingDraft {
     var species: Species
-    var photo: CapturedPhoto
+    /// nil when the bird was logged without a photo (seen or heard).
+    var photo: CapturedPhoto?
     var capturedAt: Date
     var coordinate: CLLocationCoordinate2D?
     var locationAccuracy: Double?
     var locationSource: Sighting.LocationSource?
     var notes: String?
     var mlTopPrediction: Prediction?
+    var identifiedBy: Sighting.Identification?
 
     var userOverrode: Bool {
         guard let top = mlTopPrediction else { return false }

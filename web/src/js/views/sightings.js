@@ -1,9 +1,9 @@
-import { backButton, confirmDialog, formatCoord, formatDate, h, sightingImage } from '../ui.js';
+import { backButton, confirmDialog, formatCoord, formatDate, h, sightingPicture } from '../ui.js';
 import { smallMap } from './map.js';
 
 export function sightingRow(app, s) {
   return h('a.species-row', { href: `#/sighting/${encodeURIComponent(s.id)}` },
-    h('div.row-img', sightingImage(app.store, s.id, 'thumb', 'thumb')),
+    h('div.row-img', sightingPicture(app, s, 'thumb', 'thumb')),
     h('div.row-text',
       h('strong', s.speciesCommonName),
       h('span.muted.small', formatDate(s.capturedAt)),
@@ -15,7 +15,8 @@ export function sightingRow(app, s) {
 export function sightingsView(app) {
   const { sightings } = app.store;
   return h('section.view',
-    h('header.top', h('h1', 'Sightings'), h('span.muted.small', `${sightings.length} total`)),
+    h('header.top', h('h1', 'Sightings'), h('span.muted.small', `${sightings.length} total`),
+      h('a.btn.small', { href: '#/map' }, 'Map')),
     sightings.length
       ? h('ul.rows', sightings.map((s) => h('li', sightingRow(app, s))))
       : h('div.empty-state',
@@ -46,10 +47,13 @@ export function sightingDetailView(app, id) {
 
   const node = h('section.view.detail',
     h('header.top', backButton(app, 'sightings')),
-    sightingImage(app.store, s.id, 'full', 'photo'),
+    sightingPicture(app, s, 'full', s.hasPhoto === false ? 'hero' : 'photo'),
     h('h1', s.speciesCommonName),
     h('p.sci', s.speciesSciName),
     h('p.muted', formatDate(s.capturedAt)),
+    s.identifiedBy === 'sound'
+      ? h('p.muted.small', `Identified by sound with BirdNET${s.mlTopConfidence ? ` (${Math.round(s.mlTopConfidence * 100)}%)` : ''}.`)
+      : s.hasPhoto === false ? h('p.muted.small', 'Logged without a photo — field guide picture shown.') : null,
     species ? h('p', h('a', { href: `#/species/${encodeURIComponent(species.ebirdCode)}` }, 'Field guide entry ›')) : null,
     hasLocation
       ? [mapHolder, h('p.muted.small', `${formatCoord(s.latitude, s.longitude, 5)}${s.locationSource === 'photo' ? ' · from the photo' : ''}`)]

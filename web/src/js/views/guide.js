@@ -1,15 +1,28 @@
 import { COLORS, emptyCriteria, matches, sizeInfo } from '../model.js';
 import { colorDot, h, speciesImage } from '../ui.js';
+import { groupsMatching } from '../groups.js';
 import { filterBar } from './filters.js';
+import { groupLink } from './groups.js';
 
 export function guideView(app) {
   const state = app.viewState('guide', () => ({ criteria: emptyCriteria() }));
   const species = app.catalog.species(app.region);
+  const { groups } = app.catalog.groupsFor(app.region);
   const list = h('ul.rows');
   const empty = h('p.empty');
+  const matchingGroups = h('div');
   const bar = filterBar(state.criteria, species, renderList);
 
+  // Bird groups as a scrollable row of chips, plus a link to every group and genus.
+  const chips = h('div.group-chips', { role: 'list', 'aria-label': 'Bird groups' },
+    groups.filter((g) => g.kind === 'group').map((g) => groupLink(app, g, true)),
+    h('a.group-chip.more', { href: '#/groups' }, 'All groups & genera ›'));
+
   function renderList() {
+    const found = groupsMatching(groups, state.criteria.search);
+    matchingGroups.replaceChildren(...(found.length
+      ? [h('h3', 'Groups'), h('ul.rows', found.map((g) => h('li', groupLink(app, g)))), h('h3', 'Species')]
+      : []));
     const results = species.filter((s) => matches(state.criteria, s));
     bar.update(results.length);
     list.replaceChildren(...results.map((s) =>
@@ -18,7 +31,7 @@ export function guideView(app) {
   }
   renderList();
 
-  return h('section.view', h('header.top', h('h1', 'Field Guide')), bar.node, list, empty);
+  return h('section.view', h('header.top', h('h1', 'Field Guide')), bar.node, chips, matchingGroups, list, empty);
 }
 
 /** One species row; `href` makes it a link, `onclick` a button. */

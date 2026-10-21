@@ -33,6 +33,13 @@ targets:
     platform: iOS
     sources:
       - path: DownUnderBirdCollector
+      # BirdNET sound ID model — fetched by scripts/birdnet/fetch-model.sh.
+      - path: models/birdnet/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite
+        optional: true
+        buildPhase: resources
+      - path: models/birdnet/BirdNET_GLOBAL_6K_V2.4_Labels.txt
+        optional: true
+        buildPhase: resources
     configFiles:
       Debug: Config/App.xcconfig
       Release: Config/App.xcconfig
@@ -52,7 +59,9 @@ targets:
           - arm64
         ITSAppUsesNonExemptEncryption: false
         NSCameraUsageDescription: "Down Under Bird Collector uses the camera to photograph birds you spot."
-        NSLocationWhenInUseUsageDescription: "Your location is saved with each sighting so you can see where you found each bird on the map."
+        NSMicrophoneUsageDescription: "Down Under Bird Collector listens for bird calls only while you're identifying birds by sound. Audio stays on your iPhone and is never recorded."
+        NSLocationWhenInUseUsageDescription: "Your location is saved with each sighting, and used to show birds spotted near you."
+        EBirdAPIKey: $(EBIRD_API_KEY)
     entitlements:
       path: DownUnderBirdCollector/Supporting/DownUnderBirdCollector.entitlements
       properties:
@@ -80,12 +89,20 @@ targets:
         product: Nuke
       - package: Nuke
         product: NukeUI
+      # TensorFlow Lite runtime for BirdNET — fetched by scripts/birdnet/fetch-tflite-ios.sh.
+      - framework: Vendor/TensorFlowLiteC.xcframework
+        embed: false
+      - sdk: libc++.tbd
 
   DownUnderBirdCollectorTests:
     type: bundle.unit-test
     platform: iOS
     sources:
       - DownUnderBirdCollectorTests
+      # BirdNET's example recording, for the on-device inference test.
+      - path: models/birdnet/soundscape.wav
+        optional: true
+        buildPhase: resources
     configFiles:
       Debug: Config/App.xcconfig
       Release: Config/App.xcconfig

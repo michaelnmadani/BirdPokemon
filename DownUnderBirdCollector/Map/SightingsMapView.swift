@@ -10,8 +10,9 @@ struct SightingsMapView: View {
         store.sightings.filter { $0.coordinate != nil }
     }
 
+    /// Pushed from the Sightings tab, so it lives inside that tab's navigation stack.
     var body: some View {
-        NavigationStack {
+        Group {
             Map(position: $position, selection: $selectedID) {
                 ForEach(located) { sighting in
                     // `located` only holds sightings with a coordinate.

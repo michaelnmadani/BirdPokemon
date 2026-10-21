@@ -14,6 +14,11 @@ struct SightingDetailView: View {
         store.sightings.first { $0.id == sightingID }
     }
 
+    static func soundCredit(_ sighting: Sighting) -> String {
+        guard let confidence = sighting.mlTopConfidence, confidence > 0 else { return "Identified by sound with BirdNET" }
+        return "Identified by sound with BirdNET (\(Int((confidence * 100).rounded()))%)"
+    }
+
     var body: some View {
         Group {
             if let sighting {
@@ -29,9 +34,16 @@ struct SightingDetailView: View {
     private func content(_ sighting: Sighting) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                AsyncRemoteImage(url: store.photoURL(for: sighting), contentMode: .fit)
-                    .frame(maxWidth: .infinity)
-                    .frame(maxHeight: 420)
+                if let photo = store.photoURL(for: sighting) {
+                    AsyncRemoteImage(url: photo, contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+                        .frame(maxHeight: 420)
+                } else {
+                    AsyncRemoteImage(url: catalog.species(code: sighting.speciesCode)?.thumbnail)
+                        .frame(height: 240)
+                        .frame(maxWidth: .infinity)
+                        .clipped()
+                }
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(sighting.speciesCommonName)
@@ -42,6 +54,15 @@ struct SightingDetailView: View {
                     Text(sighting.capturedAt.formatted(date: .long, time: .shortened))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                    if sighting.identifiedBy == .sound {
+                        Label(Self.soundCredit(sighting), systemImage: "waveform")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else if store.photoURL(for: sighting) == nil {
+                        Label("Logged without a photo", systemImage: "binoculars")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                     if let species = catalog.species(code: sighting.speciesCode) {
                         NavigationLink {
                             SpeciesDetailView(species: species)

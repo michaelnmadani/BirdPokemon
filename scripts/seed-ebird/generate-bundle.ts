@@ -110,6 +110,11 @@ function fromTaxonomy(t: TaxonomyEntry): BundledSpecies {
     thumbnailURL: null,
     thumbnailAttribution: null,
     thumbnailLicense: null,
+    callURL: null,
+    callAttribution: null,
+    callLicense: null,
+    callSource: null,
+    callPageURL: null,
     wikipediaURL: null,
     ebirdURL: `https://ebird.org/species/${t.speciesCode}`,
   };

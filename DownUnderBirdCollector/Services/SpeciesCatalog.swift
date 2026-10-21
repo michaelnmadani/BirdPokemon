@@ -9,18 +9,24 @@ final class SpeciesCatalog: ObservableObject {
     private(set) var byCode: [String: Species] = [:]
     /// Human-readable problems found while loading (shown in Settings).
     private(set) var loadIssues: [String] = []
+    private var groupsByRegion: [Region: (groups: [SpeciesGroup], byCode: [String: [SpeciesGroup]])] = [:]
 
     private static let log = Logger(subsystem: "DownUnderBirdCollector", category: "SpeciesCatalog")
 
     init(bundle: Bundle = .main) {
+        let definitions = Self.loadGroupDefinitions(bundle: bundle)
+        if definitions.isEmpty { record("Bird groups unavailable") }
+
         for region in Region.allCases {
             guard let url = bundle.url(forResource: "taxonomy_\(region.rawValue)", withExtension: "json") else {
                 continue
             }
             do {
                 let result = try Self.decode(Data(contentsOf: url))
-                byRegion[region] = result.species
-                for species in result.species where byCode[species.ebirdCode] == nil {
+                let regionSpecies = result.species
+                groupsByRegion[region] = SpeciesGrouping.build(definitions: definitions, species: regionSpecies)
+                byRegion[region] = regionSpecies
+                for species in regionSpecies where byCode[species.ebirdCode] == nil {
                     byCode[species.ebirdCode] = species
                 }
                 if result.skipped > 0 {
@@ -43,6 +49,24 @@ final class SpeciesCatalog: ObservableObject {
 
     func species(code: String) -> Species? {
         byCode[code]
+    }
+
+    /// Curated bird groups followed by genera, for a region.
+    func groups(in region: Region) -> [SpeciesGroup] {
+        groupsByRegion[region]?.groups ?? []
+    }
+
+    func groups(containing code: String, in region: Region) -> [SpeciesGroup] {
+        groupsByRegion[region]?.byCode[code] ?? []
+    }
+
+    private static func loadGroupDefinitions(bundle: Bundle) -> [GroupDefinition] {
+        guard
+            let url = bundle.url(forResource: "groups", withExtension: "json"),
+            let data = try? Data(contentsOf: url),
+            let definitions = try? JSONDecoder().decode([GroupDefinition].self, from: data)
+        else { return [] }
+        return definitions
     }
 
     /// Decodes a taxonomy file, skipping (and counting) records that can't be

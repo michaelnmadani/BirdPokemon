@@ -1,5 +1,5 @@
 import { REGIONS, emptyCriteria, matches } from '../model.js';
-import { h, sightingImage, speciesImage } from '../ui.js';
+import { h, sightingPicture, speciesImage } from '../ui.js';
 import { filterBar } from './filters.js';
 
 const SHOW = [
@@ -63,7 +63,7 @@ function card(app, species) {
   const collected = app.store.isCollected(species.ebirdCode);
   const latest = app.store.latest.get(species.ebirdCode);
   const image = collected && latest
-    ? sightingImage(app.store, latest.id, 'thumb', 'card-img')
+    ? sightingPicture(app, latest, 'thumb', 'card-img')
     : speciesImage(species.thumbnailURL, species.commonName, 'card-img');
   return h(`a.card${collected ? '.collected' : '.hidden'}`, {
     href: `#/species/${encodeURIComponent(species.ebirdCode)}`,
