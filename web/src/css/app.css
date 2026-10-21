@@ -137,17 +137,36 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--accent), 
 .filterbar { display: grid; gap: 8px; margin: 10px 0 12px; }
 
 /* Collection grid */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min, 104px), 1fr)); gap: 12px; }
+.results[data-size="small"] .grid { gap: 8px; }
+.results[data-size="small"] .card .name { font-size: 0.7rem; }
+.results[data-size="small"] .card :is(.seal, .mystery) { top: 4px; right: 4px; width: 18px; height: 18px; font-size: 0.65rem; border-width: 1px; }
+.results[data-size="large"] .card .name { font-size: 0.9rem; }
+.grid-options { margin: 0 0 12px; gap: 10px; }
+.group-by { display: inline-flex; align-items: center; gap: 8px; }
+.group-by select { width: auto; padding: 6px 10px; }
+.size-picker { display: inline-grid; grid-auto-flow: column; background: var(--surface-2); border-radius: 10px; padding: 3px; }
+.size-picker button {
+  border: 0; background: none; font: inherit; font-size: 0.85rem; font-weight: 700; color: var(--muted);
+  min-width: 36px; min-height: 32px; border-radius: 8px; cursor: pointer;
+}
+.size-picker button[aria-checked="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.section-head { display: flex; align-items: center; gap: 8px; font-size: 1.05rem; margin: 18px 0 10px; }
+.section-head .section-title { flex: 1; min-width: 0; }
+.section-head .swatch { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line); flex: 0 0 auto; }
+.results > .section-head:first-child { margin-top: 4px; }
 .card { position: relative; display: grid; gap: 6px; text-decoration: none; color: var(--text); }
 .card-img {
   aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--surface-2);
   background-image: radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--muted) 25%, transparent) 0 22%, transparent 23%);
 }
 .card-img img, .thumb img, .hero img, .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.card.hidden .card-img img { filter: blur(9px) brightness(0.45) saturate(0.6); transform: scale(1.15); }
+/* Not collected yet: the photo in greyscale, with a small "?" badge. */
+.card.hidden .card-img img { filter: grayscale(1) contrast(0.95); opacity: 0.85; }
 .card .mystery {
-  position: absolute; top: 0; left: 0; right: 0; aspect-ratio: 1; display: grid; place-items: center;
-  font-size: 2rem; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
+  position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 0.8rem; font-weight: 800;
+  background: rgb(0 0 0 / 0.55); color: #fff; border: 2px solid var(--surface);
 }
 .seal {
   position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%;
