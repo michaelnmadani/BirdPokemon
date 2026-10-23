@@ -40,7 +40,6 @@ targets:
       - path: DownUnderBirdCollector/Resources/Art
         type: folder
         buildPhase: resources
-        optional: true
       # BirdNET sound ID model — fetched by scripts/birdnet/fetch-model.sh.
       - path: models/birdnet/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite
         optional: true
