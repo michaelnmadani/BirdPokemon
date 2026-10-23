@@ -6,26 +6,47 @@ struct SpeciesDetailView: View {
     @EnvironmentObject private var store: SightingStore
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var catalog: SpeciesCatalog
+    /// nil follows the Settings choice; the button flips between painting and photo.
+    @State private var showPainting: Bool?
 
     private var mySightings: [Sighting] {
         store.sightings(of: species.ebirdCode)
     }
 
+    /// The watercolour (if there is one and it's chosen) or the photo, with its
+    /// credit; a watercolour can be flipped to the photo it was painted from.
+    @ViewBuilder
+    private var heroPicture: some View {
+        let artwork = catalog.artwork(for: species)
+        let painting = artwork != nil && (showPainting ?? (catalog.pictureStyle == .watercolour))
+        VStack(alignment: .trailing, spacing: 4) {
+            AsyncRemoteImage(url: painting ? artwork?.url : species.thumbnail)
+                .frame(height: 260)
+                .frame(maxWidth: .infinity)
+                .clipped()
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Spacer(minLength: 0)
+                if painting, let artwork {
+                    Text(artwork.art.credit)
+                } else if let credit = species.photoCredit {
+                    Text("Photo: \(credit) via iNaturalist")
+                }
+                if artwork != nil {
+                    Button(painting ? "Show photo" : "Show watercolour") { showPainting = !painting }
+                        .font(.caption2.weight(.semibold))
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.trailing)
+            .padding(.horizontal)
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .trailing, spacing: 4) {
-                    AsyncRemoteImage(url: species.thumbnail)
-                        .frame(height: 260)
-                        .frame(maxWidth: .infinity)
-                        .clipped()
-                    if let credit = species.photoCredit {
-                        Text("Photo: \(credit) via iNaturalist")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal)
-                    }
-                }
+                heroPicture
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(species.commonName)

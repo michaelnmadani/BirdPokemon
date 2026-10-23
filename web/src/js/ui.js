@@ -50,7 +50,7 @@ export function sightingImage(store, id, kind = 'thumb', className = 'thumb') {
 /** A sighting's own photo, or the species' field-guide picture if it was logged without one. */
 export function sightingPicture(app, sighting, kind = 'thumb', className = 'thumb') {
   if (sighting.hasPhoto === false) {
-    return speciesImage(app.catalog.get(sighting.speciesCode)?.thumbnailURL, sighting.speciesCommonName, className);
+    return speciesImage(app.catalog.picture(app.catalog.get(sighting.speciesCode)), sighting.speciesCommonName, className);
   }
   return sightingImage(app.store, sighting.id, kind, className);
 }

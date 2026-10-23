@@ -5,7 +5,9 @@ bird, identify it, and it joins your collection with the date and place you
 saw it. Fill the album one species at a time — 500 Australian birds to find.
 
 - **Collection** — every species as a card; the ones you haven't found yet
-  show in greyscale until you photograph them. Choose small, medium or large
+  show in greyscale until you photograph them. Field guide pictures can be the
+  photo or a watercolour painted from it (see
+  [`scripts/artwork/`](scripts/artwork/README.md)). Choose small, medium or large
   pictures, and group the album by bird group, family, size or colour.
 - **Field Guide** — search and filter all 500 species by size, colour and
   family, or browse by group (flightless birds, parrots & cockatoos, birds of
@@ -67,6 +69,7 @@ testing on a phone.
 | `web/` | Offline web app (no framework, no runtime dependencies) |
 | `scripts/seed-ebird/` | Node scripts that maintain the species data |
 | `scripts/train-model/` | Create ML script to train the bird-identification model |
+| `scripts/artwork/` | Paints a watercolour of every species photo with a local AI Image Studio |
 | `scripts/birdnet/` | Fetch the BirdNET sound-ID model (`models/birdnet/`) and the iOS TensorFlow Lite runtime (`Vendor/`) — neither is in git |
 | `project.yml`, `Config/` | XcodeGen project definition and build settings |
 | `.github/workflows/` | CI for iOS and web, TestFlight upload, photo fetching |

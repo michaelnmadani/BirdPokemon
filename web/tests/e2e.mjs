@@ -11,6 +11,9 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
+// Let page.route() see the service worker's requests too (the watercolour
+// fixtures are fetched through it once it controls the page).
+process.env.PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS ??= '1';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = (name) => resolve(root, 'tests/fixtures', name);
 const port = 5000 + Math.floor(Math.random() * 1000);
@@ -44,6 +47,11 @@ await context.route('**/data/taxonomy_AU.json', async (route) => {
   await route.fulfill({ response: resp, json: species });
 });
 await context.route('https://calls.test/**', (route) => route.fulfill({ path: fixture('call.wav'), contentType: 'audio/wav' }));
+// Watercolours for two species (whatever paintings this checkout has are ignored).
+await context.route('**/data/art_AU.json', (route) => route.fulfill({ path: fixture('art_AU.json'), contentType: 'application/json' }));
+await context.route('**/art/AU/*.jpg', (route) => route.fulfill({
+  path: fixture(`art/${new URL(route.request().url()).pathname.split('/').pop()}`), contentType: 'image/jpeg',
+}));
 const page = await context.newPage();
 page.setDefaultTimeout(20000);
 const errors = [];
@@ -130,6 +138,41 @@ try {
     await page.locator('.species-row', { hasText: 'Laughing Kookaburra' }).click();
     await page.getByRole('heading', { name: 'Laughing Kookaburra' }).waitFor();
     await page.getByText('Not collected yet').waitFor();
+  });
+
+  await step('Watercolour shows with its credit and flips to the photo', async () => {
+    const hero = page.locator('.hero-picture');
+    assert.match(await hero.locator('img').getAttribute('src'), /art\/AU\/laukoo1\.jpg$/);
+    await hero.getByText('Watercolour after a photo by © Kooka Photographer · CC BY-SA via iNaturalist').waitFor();
+    await hero.getByRole('button', { name: 'Show photo' }).click();
+    assert.match(await hero.locator('img').getAttribute('src'), /inaturalist/);
+    await hero.getByText(/^Photo: .* via iNaturalist$/).waitFor();
+    await hero.getByRole('button', { name: 'Show watercolour' }).click();
+    assert.match(await hero.locator('img').getAttribute('src'), /laukoo1\.jpg$/);
+  });
+
+  await step('Pictures can switch to photos, and every credit is listed', async () => {
+    await go('Collection');
+    const emu = page.locator('.card', { hasText: 'Emu' }).first().locator('img');
+    // Not collected yet, so the card shows the field-guide picture: the watercolour (in greyscale).
+    assert.match(await emu.getAttribute('src'), /art\/AU\/emu1\.jpg$/);
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('radio', { name: 'Photo' }).click();
+    await go('Collection');
+    assert.match(await page.locator('.card', { hasText: 'Emu' }).first().locator('img').getAttribute('src'), /inaturalist/);
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('radio', { name: 'Watercolour' }).click();
+    await page.getByRole('link', { name: 'Photo, painting & sound credits' }).click();
+    await page.getByRole('heading', { name: 'Credits' }).waitFor();
+    await page.getByText(/496 species photos by iNaturalist contributors, .* and 2 watercolours/).waitFor();
+    await page.getByRole('searchbox', { name: 'Search credits' }).fill('kookaburra');
+    const kooka = page.locator('.credit-entry', { hasText: 'Laughing Kookaburra' });
+    await kooka.getByText('Watercolour:').waitFor();
+    await kooka.getByRole('link', { name: 'CC BY-SA' }).waitFor();
+    await kooka.getByRole('link', { name: '© Test Recordist via xeno-canto' }).waitFor();
+    await kooka.getByText('Watercolour: adapted from the photo above').waitFor();
+    await kooka.getByRole('link', { name: 'Laughing Kookaburra' }).click();
+    await page.getByRole('heading', { name: 'Laughing Kookaburra' }).waitFor();
   });
 
   await step('Hear its call plays the recording', async () => {

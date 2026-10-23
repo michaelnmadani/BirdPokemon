@@ -39,7 +39,7 @@ struct SightingDetailView: View {
                         .frame(maxWidth: .infinity)
                         .frame(maxHeight: 420)
                 } else {
-                    AsyncRemoteImage(url: catalog.species(code: sighting.speciesCode)?.thumbnail)
+                    AsyncRemoteImage(url: catalog.picture(for: catalog.species(code: sighting.speciesCode)))
                         .frame(height: 240)
                         .frame(maxWidth: .infinity)
                         .clipped()

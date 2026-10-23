@@ -131,7 +131,7 @@ function card(app, species) {
   const latest = app.store.latest.get(species.ebirdCode);
   const image = collected && latest
     ? sightingPicture(app, latest, 'thumb', 'card-img')
-    : speciesImage(species.thumbnailURL, species.commonName, 'card-img');
+    : speciesImage(app.catalog.picture(species), species.commonName, 'card-img');
   return h(`a.card${collected ? '.collected' : '.hidden'}`, {
     href: `#/species/${encodeURIComponent(species.ebirdCode)}`,
     'aria-label': `${species.commonName}, ${collected ? 'collected' : 'not collected yet'}`,

@@ -3,10 +3,11 @@ import SwiftUI
 struct SpeciesRowView: View {
     let species: Species
     let isCaptured: Bool
+    @EnvironmentObject private var catalog: SpeciesCatalog
 
     var body: some View {
         HStack(spacing: 12) {
-            AsyncRemoteImage(url: species.thumbnail)
+            AsyncRemoteImage(url: catalog.picture(for: species))
                 .frame(width: 56, height: 56)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(alignment: .topTrailing) {

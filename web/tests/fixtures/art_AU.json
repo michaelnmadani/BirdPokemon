@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "style": "watercolour",
+  "species": {
+    "emu1": { "file": "emu1.jpg", "width": 96, "height": 96, "photoAttribution": "© Emu Photographer", "photoLicense": "cc-by-nc", "license": "cc-by-nc", "seed": 1 },
+    "laukoo1": { "file": "laukoo1.jpg", "width": 96, "height": 96, "photoAttribution": "© Kooka Photographer", "photoLicense": "cc-by-sa", "license": "cc-by-sa", "seed": 1 }
+  }
+}

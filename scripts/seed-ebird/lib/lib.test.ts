@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { normalizeColor, normalizeSpecies, bucketSize } from "./bundle.ts";
-import { cleanAttribution, photoSize } from "./inat.ts";
+import { cleanAttribution, photoCreditFor, photoSize } from "./inat.ts";
 import { parseCsv } from "./csv.ts";
 import { licenceFromUrl } from "../fetch-calls.ts";
 
@@ -46,4 +46,12 @@ test("xeno-canto licence URLs map to licence codes", () => {
   assert.equal(licenceFromUrl("//creativecommons.org/licenses/by-nc-sa/4.0/"), "cc-by-nc-sa");
   assert.equal(licenceFromUrl("https://creativecommons.org/licenses/by/4.0/"), "cc-by");
   assert.equal(licenceFromUrl("//creativecommons.org/publicdomain/zero/1.0/"), "cc0");
+});
+
+test("CC0 photos are credited to their observer", () => {
+  const cc0 = { id: 1, url: "x", license_code: "cc0", attribution: "no rights reserved" };
+  assert.equal(photoCreditFor(cc0, { login: "birdo", name: "Jo Bird" }), "Jo Bird");
+  assert.equal(photoCreditFor(cc0, { login: "birdo", name: "" }), "birdo");
+  assert.equal(photoCreditFor({ ...cc0, attribution: "(c) Jane Doe, some rights reserved (CC BY)" }, { login: "x" }), "© Jane Doe");
+  assert.equal(photoCreditFor(cc0, null), null);
 });

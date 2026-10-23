@@ -229,7 +229,7 @@ struct ListenView: View {
             let species = identifier.codes[entry.index].flatMap { catalog.species(code: $0) }
             let percent = Int((entry.best * 100).rounded())
             HStack(spacing: 12) {
-                AsyncRemoteImage(url: species?.thumbnail)
+                AsyncRemoteImage(url: catalog.picture(for: species))
                     .frame(width: 56, height: 56)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .overlay(alignment: .topTrailing) {

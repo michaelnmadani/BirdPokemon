@@ -123,7 +123,7 @@ function pickStep(app, state, rerender) {
   const renderList = () => {
     criteria.search = state.search;
     const results = species.filter((s) => matches(criteria, s)).slice(0, 200);
-    list.replaceChildren(...results.map((s) => h('li', speciesRow(s, app.store.isCollected(s.ebirdCode), null, () => {
+    list.replaceChildren(...results.map((s) => h('li', speciesRow(app, s, null, () => {
       state.species = s;
       state.step = 'confirm';
       rerender();
@@ -213,7 +213,7 @@ function confirmStep(app, state, rerender) {
       h('h1', 'Save sighting')),
     hasPhoto
       ? h('img.preview', { src: state.previewURL, alt: 'Your photo' })
-      : speciesImage(s.thumbnailURL, s.commonName, 'preview-species'),
+      : speciesImage(app.catalog.picture(s), s.commonName, 'preview-species'),
     h('div.form',
       h('div.field', h('span.label', 'Species'),
         h('strong', s.commonName), h('em.muted.small', s.scientificName),

@@ -195,7 +195,7 @@ function resultRow(app, entry) {
   const percent = Math.round(entry.best * 100);
   const collected = code && app.store.isCollected(code);
   return h('div.species-row.heard',
-    h('div.row-img', speciesImage(species?.thumbnailURL, label.common, 'thumb'),
+    h('div.row-img', speciesImage(app.catalog.picture(species), label.common, 'thumb'),
       collected ? h('span.seal.small', { 'aria-hidden': 'true' }, '✓') : null),
     h('div.row-text',
       species ? h('a', { href: `#/species/${encodeURIComponent(code)}` }, h('strong', species.commonName)) : h('strong', label.common),

@@ -51,6 +51,19 @@ struct SettingsView: View {
                          : "Sightings sync to your account so they're available on any device you sign in on.")
                 }
 
+                if catalog.hasArtwork {
+                    Section {
+                        Picker("Bird pictures", selection: $catalog.pictureStyle) {
+                            ForEach(PictureStyle.allCases) { Text($0.label).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
+                    } header: {
+                        Text("Bird pictures")
+                    } footer: {
+                        Text("Watercolours of \(catalog.artwork.count) species, painted from the field guide photos. Species without one show the photo; your own sightings always show your photos.")
+                    }
+                }
+
                 Section {
                     SecureField("eBird API key", text: $ebirdKey)
                         .textInputAutocapitalization(.never)
@@ -68,7 +81,8 @@ struct SettingsView: View {
 
                 Section("About") {
                     LabeledContent("Version", value: Self.versionString)
-                    Text("Species data from eBird (Cornell Lab of Ornithology). Species photos by iNaturalist contributors, credited on each species page. Bird calls from xeno-canto and iNaturalist recordists, credited under each player. Sound ID by BirdNET (K. Lisa Yang Center for Conservation Bioacoustics, Cornell Lab of Ornithology & Chemnitz University of Technology), model licensed CC BY-NC-SA 4.0; runs with TensorFlow Lite (Apache 2.0).")
+                    NavigationLink("Photo, painting & sound credits") { CreditsView() }
+                    Text("Species data from eBird (Cornell Lab of Ornithology). Species photos by iNaturalist contributors, credited on each species page and under Credits. Bird calls from xeno-canto and iNaturalist recordists, credited under each player. Sound ID by BirdNET (K. Lisa Yang Center for Conservation Bioacoustics, Cornell Lab of Ornithology & Chemnitz University of Technology), model licensed CC BY-NC-SA 4.0; runs with TensorFlow Lite (Apache 2.0).")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     if !catalog.loadIssues.isEmpty {

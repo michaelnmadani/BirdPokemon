@@ -7,7 +7,8 @@ const PHOTO_CACHE = 'species-photos';
 
 export function settingsView(app) {
   const species = app.catalog.species(app.region);
-  const photoURLs = [...new Set(app.catalog.regions.flatMap((r) => app.catalog.species(r)).map((s) => s.thumbnailURL).filter(Boolean))];
+  const photoURLs = [...new Set(app.catalog.regions.flatMap((r) => app.catalog.species(r))
+    .flatMap((s) => [s.thumbnailURL, app.catalog.art.get(s.ebirdCode)?.url]).filter(Boolean))];
 
   const regionPicker = app.catalog.regions.length > 1
     ? (() => {
@@ -87,6 +88,8 @@ export function settingsView(app) {
       h('button.btn.danger.wide', { type: 'button', onclick: deleteAll }, 'Delete all sightings'),
     ),
 
+    app.catalog.hasArt ? [h('h2', 'Bird pictures'), pictureStyleCard(app)] : null,
+
     h('h2', 'Nearby birds (eBird)'),
     ebirdKeyCard(),
 
@@ -105,10 +108,29 @@ export function settingsView(app) {
     h('p.muted', 'In Safari, tap Share → “Add to Home Screen”. The app then opens full-screen and works without a connection.'),
 
     h('h2', 'About'),
+    h('a.btn.wide', { href: '#/credits' }, 'Photo, painting & sound credits'),
     h('p.muted.small', 'This is the web test version of Down Under Bird Collector. Species data from eBird (Cornell Lab of Ornithology). Species photos by iNaturalist contributors, credited on each species page. Map © OpenStreetMap contributors. Bird calls from xeno-canto and iNaturalist recordists, credited under each player. Sound ID by BirdNET (Cornell Lab of Ornithology & Chemnitz University of Technology), model licensed CC BY-NC-SA 4.0.'),
     app.catalog.issues.length ? h('ul.issues', app.catalog.issues.map((i) => h('li', i))) : null,
     h('p.muted.small', `Build ${document.documentElement.dataset.build ?? 'dev'}`),
   );
+}
+
+function pictureStyleCard(app) {
+  const options = [['watercolour', 'Watercolour'], ['photo', 'Photo']];
+  const group = h('div.segmented.two', { role: 'radiogroup', 'aria-label': 'Bird pictures' }, options.map(([id, label]) =>
+    h('button', {
+      type: 'button', role: 'radio', 'aria-checked': String(app.catalog.pictureStyle === id), 'aria-selected': String(app.catalog.pictureStyle === id),
+      onclick: () => {
+        app.catalog.setPictureStyle(id);
+        group.querySelectorAll('button').forEach((b, i) => {
+          b.setAttribute('aria-checked', String(options[i][0] === id));
+          b.setAttribute('aria-selected', String(options[i][0] === id));
+        });
+      },
+    }, label)));
+  return h('div.card-list',
+    group,
+    h('p.muted.small', `Watercolours of ${app.catalog.art.size} species, painted from the field guide photos. Species without one show the photo. Your own sightings always show your photos.`));
 }
 
 function soundCard(app) {

@@ -13,6 +13,7 @@ struct SightingConfirmView: View {
     let onSaved: (Sighting, Bool) -> Void
 
     @EnvironmentObject private var store: SightingStore
+    @EnvironmentObject private var catalog: SpeciesCatalog
     @EnvironmentObject private var location: LocationService
 
     private enum LocationState {
@@ -39,7 +40,7 @@ struct SightingConfirmView: View {
                         .frame(maxWidth: .infinity, maxHeight: 240)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
-                    AsyncRemoteImage(url: species.thumbnail)
+                    AsyncRemoteImage(url: catalog.picture(for: species))
                         .frame(height: 180)
                         .frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 12))

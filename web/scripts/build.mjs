@@ -59,6 +59,17 @@ if (hasBirdnet) {
   console.warn('BirdNET model not found — building without sound ID (run scripts/birdnet/fetch-model.sh).');
 }
 
+// Watercolours painted by scripts/artwork/watercolour.py (none until it has been run).
+const artRoot = resolve(root, '../DownUnderBirdCollector/Resources/Art');
+let paintings = 0;
+for (const region of existsSync(artRoot) ? readdirSync(artRoot) : []) {
+  const manifest = join(artRoot, `art_${region}.json`);
+  if (!statSync(join(artRoot, region)).isDirectory() || !existsSync(manifest)) continue;
+  cpSync(manifest, join(dist, 'data', `art_${region}.json`));
+  cpSync(join(artRoot, region), join(dist, 'art', region), { recursive: true });
+  paintings += Object.keys(JSON.parse(readFileSync(manifest, 'utf8')).species ?? {}).length;
+}
+
 function walk(dir) {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
@@ -66,8 +77,9 @@ function walk(dir) {
   });
 }
 
-// Big sound-ID files are cached on first use instead of at install.
-const onDemand = (f) => /[\\/](models|vendor[\\/]litert)[\\/]/.test(relative(dist, f).replace(/^/, '/'));
+// Big sound-ID files and the watercolours are cached on first use (or via
+// Settings → Download species photos) instead of at install.
+const onDemand = (f) => /[\\/](models|vendor[\\/]litert|art)[\\/]/.test(relative(dist, f).replace(/^/, '/'));
 const files = walk(dist).filter((f) => !f.endsWith('sw.js') && !f.endsWith('LICENSE') && !onDemand(f)).sort();
 const swPath = join(dist, 'sw.js');
 const hash = createHash('sha256').update(readFileSync(swPath));
