@@ -30,6 +30,10 @@ Everything works offline and stays on the phone. No account needed.
 There's also a **web version** in [`web/`](web/) for trying the app on any
 phone or computer before the iOS build is on your device.
 
+**Install on your iPhone without the App Store:** download the `.ipa` from
+this repo's Releases and sideload it with your own Apple ID — see
+[SIDELOADING.md](SIDELOADING.md).
+
 ## Quick start
 
 ### iOS app (needs a Mac with Xcode 16.3 or later)
@@ -72,7 +76,7 @@ testing on a phone.
 | `scripts/artwork/` | Paints a watercolour of every species photo with a local AI Image Studio |
 | `scripts/birdnet/` | Fetch the BirdNET sound-ID model (`models/birdnet/`) and the iOS TensorFlow Lite runtime (`Vendor/`) — neither is in git |
 | `project.yml`, `Config/` | XcodeGen project definition and build settings |
-| `.github/workflows/` | CI for iOS and web, TestFlight upload, photo fetching |
+| `.github/workflows/` | CI for iOS and web, sideload `.ipa` builds, TestFlight upload, photo and call fetching |
 
 ## How it fits together
 
