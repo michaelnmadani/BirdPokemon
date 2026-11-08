@@ -18,7 +18,8 @@ concurrency:
 jobs:
   test:
     name: Build and test web app
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, which Playwright 1.56 can't install Chromium on.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:

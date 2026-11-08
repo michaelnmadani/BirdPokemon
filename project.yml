@@ -26,6 +26,8 @@ packages:
   Nuke:
     url: https://github.com/kean/Nuke
     from: 12.7.0
+  OpenCoreAMR:
+    path: ThirdParty/OpenCoreAMR
 
 targets:
   DownUnderBirdCollector:
@@ -96,6 +98,9 @@ targets:
         product: Nuke
       - package: Nuke
         product: NukeUI
+      # AMR voice-recording decoder (opencore-amr, Apache-2.0)
+      - package: OpenCoreAMR
+        product: OpenCoreAMR
       # TensorFlow Lite runtime for BirdNET — fetched by scripts/birdnet/fetch-tflite-ios.sh.
       - framework: Vendor/TensorFlowLiteC.xcframework
         embed: false

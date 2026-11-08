@@ -55,9 +55,16 @@ actor SoundIdentifier {
     }
 
     /// Decode an audio file to 48 kHz mono. Core Audio reads WAV, AIFF, MP3,
-    /// M4A/AAC, CAF, FLAC and AMR (raw .amr or in .3gp). `sourceRate` is the
-    /// recording's own rate — 8 or 16 kHz for AMR voice recordings.
+    /// M4A/AAC, CAF and FLAC; AMR voice recordings (raw .amr, or inside .3gp)
+    /// go through `AMRDecoder` since iOS can't decode them. `sourceRate` is the
+    /// recording's own rate — 8 or 16 kHz for AMR.
     static func decode(url: URL) throws -> (samples: [Float], sourceRate: Double) {
+        let data = try Data(contentsOf: url, options: .mappedIfSafe)
+        if let amr = AMRDecoder.amrFile(from: data) {
+            let (samples, rate) = try AMRDecoder.decode(amr)
+            guard Double(samples.count) / rate <= maxFileSeconds else { throw SoundIDError.tooLong }
+            return (SoundIDCore.resample(samples, from: rate), rate)
+        }
         let file = try AVAudioFile(forReading: url)
         let format = file.processingFormat // deinterleaved Float32
         guard Double(file.length) / format.sampleRate <= maxFileSeconds else { throw SoundIDError.tooLong }

@@ -52,6 +52,18 @@ final class SoundIDCoreTests: XCTestCase {
         XCTAssertEqual(SoundIDCore.durationText(75.4), "1 min 15s")
     }
 
+    func testAMRDetectionAnd3GPExtraction() throws {
+        func fixture(_ name: String, _ ext: String) throws -> Data {
+            try Data(contentsOf: try XCTUnwrap(Bundle(for: Self.self).url(forResource: name, withExtension: ext)))
+        }
+        let nb = try fixture("noise-nb", "amr")
+        XCTAssertEqual(AMRDecoder.kind(of: nb), .narrowband)
+        XCTAssertEqual(AMRDecoder.kind(of: try fixture("noise-wb", "amr")), .wideband)
+        // noise-nb.3gp is noise-nb.amr copied into a 3GP container by ffmpeg
+        XCTAssertEqual(AMRDecoder.amrFrom3GP(try fixture("noise-nb", "3gp")), nb)
+        XCTAssertNil(AMRDecoder.amrFile(from: Data("RIFF....WAVEfmt ".utf8)))
+    }
+
     /// Voice-recorder files: AMR-NB, AMR-WB and AMR inside 3GP (4 s each).
     func testDecodesAMRRecordings() throws {
         for (name, ext, rate) in [("noise-nb", "amr", 8_000.0), ("noise-wb", "amr", 16_000.0), ("noise-nb", "3gp", 8_000.0)] {
