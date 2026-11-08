@@ -42,6 +42,27 @@ final class SoundIDCoreTests: XCTestCase {
                        "tails under a second are dropped")
     }
 
+    func testLowQualityNoteAndDuration() {
+        XCTAssertNil(SoundIDCore.lowQualityNote(sourceRate: 48_000))
+        XCTAssertNil(SoundIDCore.lowQualityNote(sourceRate: 22_050))
+        XCTAssertTrue(SoundIDCore.lowQualityNote(sourceRate: 8_000)?.contains("voice-call quality (8 kHz), so sounds above 4 kHz") ?? false)
+        XCTAssertTrue(SoundIDCore.lowQualityNote(sourceRate: 16_000)?.contains("(16 kHz), so sounds above 8 kHz") ?? false)
+        XCTAssertEqual(SoundIDCore.durationText(4), "4s")
+        XCTAssertEqual(SoundIDCore.durationText(120), "2 min")
+        XCTAssertEqual(SoundIDCore.durationText(75.4), "1 min 15s")
+    }
+
+    /// Voice-recorder files: AMR-NB, AMR-WB and AMR inside 3GP (4 s each).
+    func testDecodesAMRRecordings() throws {
+        for (name, ext, rate) in [("noise-nb", "amr", 8_000.0), ("noise-wb", "amr", 16_000.0), ("noise-nb", "3gp", 8_000.0)] {
+            let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: name, withExtension: ext), "\(name).\(ext) not bundled")
+            let (samples, sourceRate) = try SoundIdentifier.decode(url: url)
+            XCTAssertEqual(sourceRate, rate, "\(name).\(ext)")
+            XCTAssertEqual(Double(samples.count) / SoundIDCore.sampleRate, 4, accuracy: 0.2, "\(name).\(ext)")
+            XCTAssertGreaterThan(samples.map { abs($0) }.max() ?? 0, 0.01, "\(name).\(ext) decoded to silence")
+        }
+    }
+
     func testTallyKeepsBestAndCounts() {
         var tally: [Int: SoundTallyEntry] = [:]
         SoundIDCore.addToTally(&tally, [SoundDetection(index: 4, confidence: 0.4)], at: 0)
@@ -65,8 +86,9 @@ final class BirdNETModelTests: XCTestCase {
         XCTAssertEqual(identifier.labels.count, 6522)
         XCTAssertGreaterThanOrEqual(Set(identifier.codes.compactMap { $0 }).count, 360)
 
-        let samples = try SoundIdentifier.decode(url: recording)
+        let (samples, sourceRate) = try SoundIdentifier.decode(url: recording)
         XCTAssertEqual(samples.count, 120 * 48_000)
+        XCTAssertEqual(sourceRate, 48_000)
         let windows = SoundIDCore.windows(samples)
         let chickadee = try XCTUnwrap(identifier.labels.firstIndex { $0.commonName == "Black-capped Chickadee" })
         let finch = try XCTUnwrap(identifier.labels.firstIndex { $0.commonName == "House Finch" })

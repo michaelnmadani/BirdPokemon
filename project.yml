@@ -110,6 +110,13 @@ targets:
       - path: models/birdnet/soundscape.wav
         optional: true
         buildPhase: resources
+      # Voice-recorder (AMR / 3GP) fixtures shared with the web tests.
+      - path: web/tests/fixtures/noise-nb.amr
+        buildPhase: resources
+      - path: web/tests/fixtures/noise-wb.amr
+        buildPhase: resources
+      - path: web/tests/fixtures/noise-nb.3gp
+        buildPhase: resources
     configFiles:
       Debug: Config/App.xcconfig
       Release: Config/App.xcconfig

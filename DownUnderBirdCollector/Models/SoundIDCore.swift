@@ -119,6 +119,25 @@ enum SoundIDCore {
         }
     }
 
+    /// Voice-recorder formats (AMR, 8 or 16 kHz) keep only low frequencies,
+    /// where few birds sing. nil for full-quality recordings.
+    static func lowQualityNote(sourceRate: Double) -> String? {
+        guard sourceRate < 22_050 else { return nil }
+        func khz(_ hz: Double) -> String {
+            let value = hz / 1000
+            return value == value.rounded() ? "\(Int(value)) kHz" : String(format: "%.1f kHz", value)
+        }
+        return "This recording is voice-call quality (\(khz(sourceRate))), so sounds above \(khz(sourceRate / 2)) were lost — "
+            + "many songbirds call higher than that and won't be recognised. For best results record in M4A or WAV "
+            + "(on Android, set your recorder to high quality)."
+    }
+
+    /// 4 -> "4s", 120 -> "2 min", 75 -> "1 min 15s"
+    static func durationText(_ seconds: Double) -> String {
+        let t = Int(seconds.rounded())
+        return t < 60 ? "\(t)s" : "\(t / 60) min" + (t % 60 == 0 ? "" : " \(t % 60)s")
+    }
+
     static func rank(_ tally: [Int: SoundTallyEntry]) -> [SoundTallyEntry] {
         tally.values.sorted { ($0.best, $0.count, -$0.index) > ($1.best, $1.count, -$1.index) }
     }

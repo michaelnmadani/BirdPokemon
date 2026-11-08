@@ -16,6 +16,10 @@ final class ListenViewModel: ObservableObject {
     @Published private(set) var source: String?
     @Published var fieldGuideOnly = true
     @Published var errorMessage: String?
+    /// e.g. a warning that the recording is too low quality for many birds
+    @Published private(set) var note: String?
+    /// Length of the analysed recording (nil when listening live).
+    @Published private(set) var fileSeconds: Double?
 
     /// Loaded once and kept for the app's lifetime (the model is ~50 MB).
     private static var sharedIdentifier: SoundIdentifier?
@@ -71,7 +75,11 @@ final class ListenViewModel: ObservableObject {
             let identifier = try await load(species: species)
             begin(source: url.lastPathComponent)
             mode = .analysing(progress: 0)
-            let samples = try await Task.detached(priority: .userInitiated) { try SoundIdentifier.decode(url: url) }.value
+            let (samples, sourceRate) = try await Task.detached(priority: .userInitiated) {
+                try SoundIdentifier.decode(url: url)
+            }.value
+            note = SoundIDCore.lowQualityNote(sourceRate: sourceRate)
+            fileSeconds = Double(samples.count) / SoundIDCore.sampleRate
             let chunks = SoundIDCore.windows(samples)
             for (i, chunk) in chunks.enumerated() {
                 await process(chunk.samples, at: Double(chunk.start) / SoundIDCore.sampleRate, with: identifier)
@@ -81,7 +89,7 @@ final class ListenViewModel: ObservableObject {
             if tally.isEmpty { errorMessage = "No birds recognised in that recording." }
         } catch {
             mode = .idle
-            errorMessage = "Couldn't analyse that recording: \(error.localizedDescription)"
+            errorMessage = "Couldn't analyse \(url.lastPathComponent): use a WAV, MP3, M4A/AAC, FLAC or AMR recording. (\(error.localizedDescription))"
         }
     }
 
@@ -101,6 +109,8 @@ final class ListenViewModel: ObservableObject {
         tally = [:]
         windowsDone = 0
         errorMessage = nil
+        note = nil
+        fileSeconds = nil
         self.source = source
     }
 
@@ -166,6 +176,11 @@ struct ListenView: View {
                 if let error = model.errorMessage {
                     Text(error).font(.footnote).foregroundStyle(.red)
                 }
+                if let note = model.note, !model.isBusy {
+                    Label(note, systemImage: "exclamationmark.triangle")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                }
             }
 
             if !model.results.isEmpty {
@@ -184,13 +199,17 @@ struct ListenView: View {
         }
         .navigationTitle("Identify by sound")
         .navigationBarTitleDisplayMode(.inline)
-        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.audio]) { result in
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: Self.recordingTypes) { result in
             if case .success(let url) = result {
                 Task { await model.analyse(fileAt: url, species: catalogSpecies) }
             }
         }
         .onDisappear { model.stopListening() }
     }
+
+    /// Audio files, plus voice-recorder formats some apps don't label as audio.
+    static let recordingTypes: [UTType] = [.audio]
+        + ["amr", "awb", "3gp", "3ga"].compactMap { UTType(filenameExtension: $0) }
 
     private var catalogSpecies: [Species] {
         catalog.species(in: appState.selectedRegion)
@@ -211,7 +230,8 @@ struct ListenView: View {
             }
         case .idle:
             if model.windowsDone > 0 {
-                Text("\(model.windowsDone * 3)s of audio analysed\(model.source.map { " from \($0)" } ?? "").")
+                Text(model.source.map { "\(SoundIDCore.durationText(model.fileSeconds ?? Double(model.windowsDone * 3))) of audio analysed from \($0)." }
+                     ?? "\(model.windowsDone * 3)s of audio analysed.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {

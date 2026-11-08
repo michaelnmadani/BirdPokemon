@@ -332,7 +332,7 @@ try {
       await page.getByLabel('Only birds in the field guide').uncheck();
       await page.locator('#sound-file').setInputFiles(soundscape);
       await page.getByRole('heading', { name: 'Heard' }).waitFor({ timeout: 120_000 });
-      await page.getByText(/s of audio analysed from soundscape\.wav/).waitFor({ timeout: 120_000 });
+      await page.getByText('2 min of audio analysed from soundscape.wav.').waitFor({ timeout: 120_000 });
       const chickadee = page.locator('.species-row', { hasText: 'Black-capped Chickadee' });
       await chickadee.getByText('Not in the field guide').waitFor();
       assert.equal(await chickadee.getByRole('button', { name: 'Log it' }).count(), 0);
@@ -340,6 +340,18 @@ try {
       await page.getByLabel('Only birds in the field guide').check();
       assert.equal(await chickadee.count(), 0, 'field-guide filter hides North American birds');
       await page.getByText(/untick “Only birds in the field guide”/).waitFor();
+    });
+
+    await step('Voice-recorder AMR files (raw and 3GP) are analysed, with a quality warning', async () => {
+      for (const [file, rate] of [['noise-nb.amr', '8 kHz'], ['noise-wb.amr', '16 kHz'], ['noise-nb.3gp', '8 kHz']]) {
+        await page.locator('#sound-file').setInputFiles(fixture(file));
+        await page.getByText(`4s of audio analysed from ${file}.`).waitFor({ timeout: 60_000 });
+        await page.getByText(`This recording is voice-call quality (${rate})`).waitFor();
+      }
+      // A full-quality recording clears the warning again.
+      await page.locator('#sound-file').setInputFiles(fixture('call.wav'));
+      await page.getByText(/of audio analysed from call\.wav\./).waitFor({ timeout: 60_000 });
+      assert.equal(await page.getByText(/voice-call quality/).count(), 0);
     });
 
     await step('Log a bird identified by sound', async () => {

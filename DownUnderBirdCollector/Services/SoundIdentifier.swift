@@ -54,8 +54,10 @@ actor SoundIdentifier {
         try interpreter.run(samples)
     }
 
-    /// Decode an audio file to 48 kHz mono.
-    static func decode(url: URL) throws -> [Float] {
+    /// Decode an audio file to 48 kHz mono. Core Audio reads WAV, AIFF, MP3,
+    /// M4A/AAC, CAF, FLAC and AMR (raw .amr or in .3gp). `sourceRate` is the
+    /// recording's own rate — 8 or 16 kHz for AMR voice recordings.
+    static func decode(url: URL) throws -> (samples: [Float], sourceRate: Double) {
         let file = try AVAudioFile(forReading: url)
         let format = file.processingFormat // deinterleaved Float32
         guard Double(file.length) / format.sampleRate <= maxFileSeconds else { throw SoundIDError.tooLong }
@@ -66,7 +68,7 @@ actor SoundIdentifier {
         guard let data = buffer.floatChannelData else { throw SoundIDError.modelFailed("audio format") }
         let frames = Int(buffer.frameLength)
         let channels = (0..<Int(format.channelCount)).map { Array(UnsafeBufferPointer(start: data[$0], count: frames)) }
-        return SoundIDCore.resample(SoundIDCore.mixToMono(channels), from: format.sampleRate)
+        return (SoundIDCore.resample(SoundIDCore.mixToMono(channels), from: format.sampleRate), format.sampleRate)
     }
 }
 

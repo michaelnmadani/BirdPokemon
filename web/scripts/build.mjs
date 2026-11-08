@@ -49,6 +49,13 @@ for (const variant of ['litert_wasm_internal', 'litert_wasm_compat_internal']) {
   for (const ext of ['js', 'wasm']) cpSync(join(litert, `core/wasm/${variant}.${ext}`), join(dist, `vendor/litert/${variant}.${ext}`));
 }
 
+// AMR decoder (opencore-amr in WASM, Apache-2.0) for voice-recorder files.
+const amr = join(root, 'node_modules/@audio/decode-amr');
+mkdirSync(join(dist, 'vendor/amr/src'), { recursive: true });
+cpSync(join(amr, 'decode-amr.js'), join(dist, 'vendor/amr/decode-amr.js'));
+cpSync(join(amr, 'src/amr.wasm.js'), join(dist, 'vendor/amr/src/amr.wasm.js'));
+cpSync(join(amr, 'LICENSE'), join(dist, 'vendor/amr/LICENSE'));
+
 // BirdNET model (CC BY-NC-SA 4.0), fetched by scripts/birdnet/fetch-model.sh.
 const birdnetFiles = ['BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite', 'BirdNET_GLOBAL_6K_V2.4_Labels.txt', 'LICENSE-BirdNET.txt'];
 const hasBirdnet = birdnetFiles.every((f) => existsSync(join(birdnet, f)));

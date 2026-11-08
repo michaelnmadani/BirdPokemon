@@ -2,7 +2,7 @@
 // The model (~52 MB) downloads on first use and is kept in Cache Storage,
 // so after that it works offline. Model: CC BY-NC-SA 4.0, Cornell Lab of
 // Ornithology & Chemnitz University of Technology.
-import { SAMPLE_RATE, WINDOW, mapLabels, mixToMono, parseLabels, resample } from './soundid-core.js';
+import { SAMPLE_RATE, WINDOW, amrFrom3gp, amrKind, mapLabels, mixToMono, parseLabels, resample } from './soundid-core.js';
 
 export const MODEL_URL = new URL('../models/birdnet/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite', import.meta.url).href;
 export const LABELS_URL = new URL('../models/birdnet/BirdNET_GLOBAL_6K_V2.4_Labels.txt', import.meta.url).href;
@@ -98,13 +98,41 @@ export class SoundID {
   }
 }
 
-/** Decode an audio file to 48 kHz mono. */
+const TOO_LONG = 'Recordings longer than 10 minutes aren’t supported.';
+
+/**
+ * Decode an audio file to 48 kHz mono: { samples, sourceRate }. `sourceRate`
+ * is the recording's own rate — AMR voice recordings are 8 or 16 kHz, so
+ * high-pitched calls are missing from them.
+ */
 export async function decodeFile(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  // AMR (raw, or inside the 3GP/3GA files Android recorders make) — browsers can't decode it.
+  const amr = amrKind(bytes) ? bytes : (/\.(3gp|3ga|3gpp)$/i.test(file.name) || isIsoMedia(bytes)) ? amrFrom3gp(bytes) : null;
+  if (amr) {
+    const { default: decodeAmr } = await import('../vendor/amr/decode-amr.js');
+    const { channelData, sampleRate } = await decodeAmr(amr);
+    if (!channelData.length) throw new Error('The AMR recording has no audio in it.');
+    if (channelData[0].length / sampleRate > MAX_FILE_SECONDS) throw new Error(TOO_LONG);
+    return { samples: resample(channelData[0], sampleRate), sourceRate: sampleRate };
+  }
+
   const ctx = new OfflineAudioContext(1, 1, SAMPLE_RATE);
-  const buffer = await ctx.decodeAudioData(await file.arrayBuffer());
-  if (buffer.duration > MAX_FILE_SECONDS) throw new Error('Recordings longer than 10 minutes aren’t supported.');
+  let buffer;
+  try {
+    buffer = await ctx.decodeAudioData(bytes.buffer);
+  } catch {
+    const type = file.name.includes('.') ? `.${file.name.split('.').pop()}` : 'This';
+    throw new Error(`${type} files can’t be read here. Use a WAV, MP3, M4A/AAC, OGG, FLAC or AMR recording.`);
+  }
+  if (buffer.duration > MAX_FILE_SECONDS) throw new Error(TOO_LONG);
   const channels = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i));
-  return resample(mixToMono(channels), buffer.sampleRate);
+  return { samples: resample(mixToMono(channels), buffer.sampleRate), sourceRate: buffer.sampleRate };
+}
+
+/** MP4-family file (3GP, M4A, …): starts with an 'ftyp' box. */
+function isIsoMedia(bytes) {
+  return String.fromCharCode(...bytes.subarray(4, 8)) === 'ftyp';
 }
 
 /**

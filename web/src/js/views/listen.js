@@ -17,6 +17,7 @@ function freshState() {
     windowsDone: 0,
     fieldGuideOnly: true,
     error: '',
+    note: '',               // e.g. a warning about a low-quality recording
     source: '',             // 'mic' | file name
     available: null,
     downloaded: null,
@@ -81,6 +82,7 @@ async function startListening(app, state, rerender) {
     state.tally = new Map();
     state.windowsDone = 0;
     state.error = '';
+    state.note = '';
     state.source = 'mic';
     listener = new Listener();
     await listener.start(async (samples, at) => {
@@ -101,9 +103,12 @@ async function startListening(app, state, rerender) {
 async function analyseFile(app, state, rerender, file) {
   try {
     await ensureEngine(app, state, rerender);
-    Object.assign(state, { mode: 'analysing', tally: new Map(), windowsDone: 0, error: '', source: file.name, progress: 0 });
+    Object.assign(state, { mode: 'analysing', tally: new Map(), windowsDone: 0, error: '', note: '', source: file.name, progress: 0 });
     rerender();
-    const chunks = windows(await decodeFile(file));
+    const { samples, sourceRate } = await decodeFile(file);
+    state.note = lowQualityNote(sourceRate);
+    state.fileSeconds = samples.length / 48000;
+    const chunks = windows(samples);
     for (const [i, chunk] of chunks.entries()) {
       await processWindow(state, chunk.samples, chunk.start / 48000);
       state.progress = (i + 1) / chunks.length;
@@ -118,6 +123,15 @@ async function analyseFile(app, state, rerender, file) {
   rerender();
 }
 
+/** Voice-recorder formats (AMR) keep only low frequencies, where few birds sing. */
+export function lowQualityNote(sourceRate) {
+  if (sourceRate >= 22050) return '';
+  const khz = (n) => `${Number((n / 1000).toFixed(1))} kHz`;
+  return `This recording is voice-call quality (${khz(sourceRate)}), so sounds above ${khz(sourceRate / 2)} were lost — `
+    + 'many songbirds call higher than that and won’t be recognised. For best results record in M4A or WAV '
+    + '(on Android, set your recorder to high quality).';
+}
+
 function render(app, state, rerender) {
   const header = h('header.top', backButton(app, 'capture', 'Capture'), h('h1', 'Identify by sound'));
   const credit = h('p.muted.small', 'Powered by ', h('a', { href: 'https://birdnet.cornell.edu', target: '_blank', rel: 'noopener' }, 'BirdNET'),
@@ -128,7 +142,10 @@ function render(app, state, rerender) {
   }
 
   const busy = state.mode === 'loading' || state.mode === 'analysing';
-  const fileInput = h('input.visually-hidden', { type: 'file', accept: 'audio/*', id: 'sound-file', disabled: busy || state.mode === 'listening' });
+  // AMR / 3GP voice recordings are listed explicitly: some phones don't count them as audio/*.
+  const fileInput = h('input.visually-hidden', {
+    type: 'file', accept: 'audio/*,.amr,.awb,.3gp,.3ga,.m4a', id: 'sound-file', disabled: busy || state.mode === 'listening',
+  });
   fileInput.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -157,6 +174,7 @@ function render(app, state, rerender) {
     h('label.check.inline', toggle, h('span', 'Only birds in the field guide')),
     status(state),
     state.error ? h('p.notice', state.error) : null,
+    state.note && state.mode !== 'analysing' ? h('p.notice', state.note) : null,
     results(app, state),
   ];
 }
@@ -172,7 +190,10 @@ function status(state) {
       return h('div.progress-card', h('span', `Analysing ${state.source}… ${Math.round(state.progress * 100)}%`),
         h('progress', { max: 1, value: state.progress }));
     default:
-      return state.windowsDone ? h('p.muted.small', `${state.windowsDone * 3}s of audio analysed${state.source && state.source !== 'mic' ? ` from ${state.source}` : ''}.`) : null;
+      if (!state.windowsDone) return null;
+      return h('p.muted.small', state.source && state.source !== 'mic'
+        ? `${durationText(state.fileSeconds ?? state.windowsDone * 3)} of audio analysed from ${state.source}.`
+        : `${state.windowsDone * 3}s of audio analysed.`);
   }
 }
 
@@ -208,6 +229,12 @@ function resultRow(app, entry) {
       ? h('button.btn.small.primary', { type: 'button', onclick: () => beginSoundSighting(app, species, entry.best) }, 'Log it')
       : null,
   );
+}
+
+/** 4 -> "4s", 120 -> "2 min", 75 -> "1 min 15s" */
+export function durationText(seconds) {
+  const t = Math.round(seconds);
+  return t < 60 ? `${t}s` : `${Math.floor(t / 60)} min${t % 60 ? ` ${t % 60}s` : ''}`;
 }
 
 function formatSeconds(s) {
