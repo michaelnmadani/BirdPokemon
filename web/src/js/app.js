@@ -11,6 +11,7 @@ import { mapView } from './views/map.js';
 import { nearbyView } from './views/nearby.js';
 import { listenView } from './views/listen.js';
 import { settingsView } from './views/settings.js';
+import { creditsView } from './views/credits.js';
 
 const TABS = [
   { route: 'collection', label: 'Collection', icon: 'grid' },
@@ -33,10 +34,11 @@ const ROUTES = {
   nearby: nearbyView,
   listen: listenView,
   settings: settingsView,
+  credits: creditsView,
 };
 
 // Which tab a detail screen belongs to, for highlighting.
-const TAB_FOR = { species: 'guide', groups: 'guide', group: 'guide', sighting: 'sightings', map: 'sightings', listen: 'capture', settings: 'collection' };
+const TAB_FOR = { species: 'guide', groups: 'guide', group: 'guide', sighting: 'sightings', map: 'sightings', listen: 'capture', settings: 'collection', credits: 'collection' };
 
 function readPref(key, fallback) {
   try {

@@ -83,9 +83,21 @@ struct IdentifyView: View {
 
         case .done(.ambiguous(let predictions)):
             VStack(alignment: .leading, spacing: 12) {
-                Text(predictions.isEmpty ? "We couldn't recognise this bird" : "Which bird is it?")
+                Text(predictions.isEmpty ? "We couldn't recognise this bird"
+                     : viewModel.unsure ? "Possible matches" : "Which bird is it?")
                     .font(.headline)
                     .padding(.horizontal)
+                if predictions.isEmpty {
+                    Text("The identifier knows only some Australian birds (77 of 500), so choose it from the field guide.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
+                } else if viewModel.unsure {
+                    Text("Not sure — this may be a bird the identifier doesn't know. Compare with your photo before choosing.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
+                }
 
                 ForEach(predictions) { prediction in
                     Button {

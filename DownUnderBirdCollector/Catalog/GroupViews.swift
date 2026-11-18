@@ -42,12 +42,13 @@ struct GroupChipsRow: View {
 struct GroupRowView: View {
     let group: SpeciesGroup
 
+    @EnvironmentObject private var catalog: SpeciesCatalog
     @EnvironmentObject private var store: SightingStore
 
     var body: some View {
         let have = group.species.filter(store.isCaptured).count
         HStack(spacing: 12) {
-            AsyncRemoteImage(url: group.species.first { $0.thumbnail != nil }?.thumbnail)
+            AsyncRemoteImage(url: group.species.lazy.compactMap { catalog.picture(for: $0) }.first)
                 .frame(width: 56, height: 56)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 3) {

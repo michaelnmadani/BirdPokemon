@@ -1,5 +1,9 @@
 # Getting Down Under Bird Collector onto iPhones
 
+> **Just want it on your own iPhone, no developer account?** Sideload it —
+> see [SIDELOADING.md](SIDELOADING.md). The rest of this page is for
+> TestFlight and the App Store.
+
 There are two ways to build and ship the app. **Path A** uses Xcode on a Mac
 and is the most direct. **Path B** uses the GitHub Actions workflow in this
 repo, so you can ship to TestFlight without owning a Mac.

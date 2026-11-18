@@ -201,7 +201,7 @@ function nearbyRow(app, e) {
     details.push(`eBird: ${daysAgo(parseEbirdDate(e.report.obsDt))}${where}`);
   }
   const content = [
-    h('div.row-img', speciesImage(e.species?.thumbnailURL, e.name, 'thumb'),
+    h('div.row-img', speciesImage(app.catalog.picture(e.species), e.name, 'thumb'),
       collected ? h('span.seal.small', { 'aria-hidden': 'true' }, '✓') : null),
     h('div.row-text',
       h('strong', e.name),

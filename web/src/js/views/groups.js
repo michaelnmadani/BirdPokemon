@@ -14,9 +14,9 @@ export function groupLink(app, group, compact = false) {
   if (compact) {
     return h('a.group-chip', { href }, h('span', { 'aria-hidden': 'true' }, group.emoji), ` ${group.name} `, h('span.muted.small', String(total)));
   }
-  const cover = group.species.find((s) => s.thumbnailURL);
+  const cover = group.species.find((s) => app.catalog.picture(s));
   return h('a.species-row.group-row', { href, 'aria-label': `${group.name}, ${have} of ${total} collected` },
-    h('div.row-img', speciesImage(cover?.thumbnailURL, group.name, 'thumb')),
+    h('div.row-img', speciesImage(app.catalog.picture(cover), group.name, 'thumb')),
     h('div.row-text',
       h('strong', group.kind === 'genus' ? group.name : `${group.emoji} ${group.name}`),
       group.kind === 'genus' ? h('em.muted.small', `Genus ${group.genus}`) : h('span.muted.small', 'Bird group'),
@@ -74,6 +74,6 @@ export function groupView(app, id) {
       h('progress', { max: Math.max(total, 1), value: have }),
     ),
     h('ul.rows', group.species.map((s) =>
-      h('li', speciesRow(s, app.store.isCollected(s.ebirdCode), `#/species/${encodeURIComponent(s.ebirdCode)}`)))),
+      h('li', speciesRow(app, s, `#/species/${encodeURIComponent(s.ebirdCode)}`)))),
   );
 }

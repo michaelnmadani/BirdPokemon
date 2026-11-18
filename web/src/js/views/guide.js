@@ -26,7 +26,7 @@ export function guideView(app) {
     const results = species.filter((s) => matches(state.criteria, s));
     bar.update(results.length);
     list.replaceChildren(...results.map((s) =>
-      h('li', speciesRow(s, app.store.isCollected(s.ebirdCode), `#/species/${encodeURIComponent(s.ebirdCode)}`))));
+      h('li', speciesRow(app, s, `#/species/${encodeURIComponent(s.ebirdCode)}`))));
     empty.textContent = results.length ? '' : 'No matches. Try a shorter name or remove a filter.';
   }
   renderList();
@@ -35,9 +35,10 @@ export function guideView(app) {
 }
 
 /** One species row; `href` makes it a link, `onclick` a button. */
-export function speciesRow(species, collected, href, onclick) {
+export function speciesRow(app, species, href, onclick) {
+  const collected = app.store.isCollected(species.ebirdCode);
   const content = [
-    h('div.row-img', speciesImage(species.thumbnailURL, species.commonName, 'thumb'),
+    h('div.row-img', speciesImage(app.catalog.picture(species), species.commonName, 'thumb'),
       collected ? h('span.seal.small', { 'aria-hidden': 'true' }, '✓') : null),
     h('div.row-text',
       h('strong', species.commonName),

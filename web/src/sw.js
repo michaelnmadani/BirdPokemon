@@ -27,8 +27,11 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
 
-  if (url.origin === self.location.origin && /\/(models\/birdnet|vendor\/litert)\//.test(url.pathname)) {
+  if (url.origin === self.location.origin && /\/(models|vendor\/litert)\//.test(url.pathname)) {
     event.respondWith(onDemand(request));
+  } else if (url.origin === self.location.origin && /\/art\//.test(url.pathname)) {
+    // Watercolours: kept like species photos once seen (or all at once from Settings).
+    event.respondWith(speciesPhoto(request));
   } else if (url.origin === self.location.origin) {
     event.respondWith(appShell(request));
   } else if (PHOTO_HOSTS.includes(url.hostname) && request.destination === 'image') {
@@ -53,7 +56,7 @@ async function appShell(request) {
   }
 }
 
-// Sound ID runtime and model: cached the first time they're used.
+// Sound and photo ID runtime and models: cached the first time they're used.
 async function onDemand(request) {
   const cache = await caches.open(BIRDNET_CACHE);
   const cached = await cache.match(request.url);

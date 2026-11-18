@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import {
-  SAMPLE_RATE, WINDOW, addToTally, detections, mapLabels, mixToMono, parseLabels, rankTally, resample, sigmoid, windows,
+  SAMPLE_RATE, WINDOW, addToTally, amrFrom3gp, amrKind, detections, mapLabels, mixToMono, parseLabels, rankTally, resample, sigmoid, windows,
 } from '../../src/js/soundid-core.js';
 import { normalizeSpecies } from '../../src/js/model.js';
 
@@ -58,4 +58,20 @@ test('tally keeps the best confidence and counts', () => {
   addToTally(tally, [{ index: 4, confidence: 0.9 }, { index: 7, confidence: 0.3 }], 3);
   const ranked = rankTally(tally);
   assert.deepEqual(ranked.map((e) => [e.index, e.best, e.count, e.lastAt]), [[4, 0.9, 2, 3], [7, 0.3, 1, 3]]);
+});
+
+const fixtureBytes = (name) => new Uint8Array(readFileSync(new URL(`../fixtures/${name}`, import.meta.url)));
+
+test('AMR files are recognised by their header', () => {
+  assert.equal(amrKind(fixtureBytes('noise-nb.amr')), 'nb');
+  assert.equal(amrKind(fixtureBytes('noise-wb.amr')), 'wb');
+  assert.equal(amrKind(fixtureBytes('call.wav')), null);
+  assert.equal(amrKind(new Uint8Array(3)), null);
+});
+
+test('the AMR track of a 3GP recording comes out as a plain .amr file', () => {
+  // noise-nb.3gp is noise-nb.amr copied into a 3GP container by ffmpeg
+  assert.deepEqual(amrFrom3gp(fixtureBytes('noise-nb.3gp')), fixtureBytes('noise-nb.amr'));
+  assert.equal(amrFrom3gp(fixtureBytes('noise-nb.amr')), null);
+  assert.equal(amrFrom3gp(fixtureBytes('call.wav')), null);
 });

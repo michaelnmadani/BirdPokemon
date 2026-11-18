@@ -89,6 +89,13 @@ export function photoCredit(species) {
   return parts.length ? parts.join(' · ') : null;
 }
 
+/** Credit for a watercolour painted from an iNaturalist photo (see scripts/artwork). */
+export function artCredit(art) {
+  if (!art) return null;
+  const photo = [art.photoAttribution, licenceLabel(art.photoLicense)].filter(Boolean).join(' · ');
+  return `Watercolour after a photo${photo ? ` by ${photo}` : ''} via iNaturalist`;
+}
+
 export function callCredit(species) {
   if (!species.callURL) return null;
   const source = { 'xeno-canto': 'xeno-canto', inaturalist: 'iNaturalist' }[species.callSource] ?? 'the web';

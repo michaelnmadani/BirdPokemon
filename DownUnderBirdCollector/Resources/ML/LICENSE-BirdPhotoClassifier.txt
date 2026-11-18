@@ -1,0 +1,8 @@
+Bird photo classifier: MobileNet V2 (224x224, uint8 quantized) trained on
+iNaturalist bird photos, 964 species + background — Google, from
+https://github.com/google-coral/test_data
+(mobilenet_v2_1.0_224_inat_bird_quant.tflite, inat_bird_labels.txt;
+SHA-256 of the model 350fcd8cf1df1560060d464595dfed8b174b05792788052896004848d9ad04f9).
+
+Licensed under the Apache License, Version 2.0:
+https://www.apache.org/licenses/LICENSE-2.0

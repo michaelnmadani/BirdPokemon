@@ -49,6 +49,20 @@ for (const variant of ['litert_wasm_internal', 'litert_wasm_compat_internal']) {
   for (const ext of ['js', 'wasm']) cpSync(join(litert, `core/wasm/${variant}.${ext}`), join(dist, `vendor/litert/${variant}.${ext}`));
 }
 
+// AMR decoder (opencore-amr in WASM, Apache-2.0) for voice-recorder files.
+const amr = join(root, 'node_modules/@audio/decode-amr');
+mkdirSync(join(dist, 'vendor/amr/src'), { recursive: true });
+cpSync(join(amr, 'decode-amr.js'), join(dist, 'vendor/amr/decode-amr.js'));
+cpSync(join(amr, 'src/amr.wasm.js'), join(dist, 'vendor/amr/src/amr.wasm.js'));
+cpSync(join(amr, 'LICENSE'), join(dist, 'vendor/amr/LICENSE'));
+
+// Photo identification model (Apache-2.0), kept in the repo.
+const photoModel = resolve(root, '../DownUnderBirdCollector/Resources/ML');
+mkdirSync(join(dist, 'models/photo'), { recursive: true });
+for (const f of ['BirdPhotoClassifier.tflite', 'BirdPhotoClassifier_labels.txt', 'LICENSE-BirdPhotoClassifier.txt']) {
+  cpSync(join(photoModel, f), join(dist, 'models/photo', f));
+}
+
 // BirdNET model (CC BY-NC-SA 4.0), fetched by scripts/birdnet/fetch-model.sh.
 const birdnetFiles = ['BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite', 'BirdNET_GLOBAL_6K_V2.4_Labels.txt', 'LICENSE-BirdNET.txt'];
 const hasBirdnet = birdnetFiles.every((f) => existsSync(join(birdnet, f)));
@@ -59,6 +73,17 @@ if (hasBirdnet) {
   console.warn('BirdNET model not found — building without sound ID (run scripts/birdnet/fetch-model.sh).');
 }
 
+// Watercolours painted by scripts/artwork/watercolour.py (none until it has been run).
+const artRoot = resolve(root, '../DownUnderBirdCollector/Resources/Art');
+let paintings = 0;
+for (const region of existsSync(artRoot) ? readdirSync(artRoot) : []) {
+  const manifest = join(artRoot, `art_${region}.json`);
+  if (!statSync(join(artRoot, region)).isDirectory() || !existsSync(manifest)) continue;
+  cpSync(manifest, join(dist, 'data', `art_${region}.json`));
+  cpSync(join(artRoot, region), join(dist, 'art', region), { recursive: true });
+  paintings += Object.keys(JSON.parse(readFileSync(manifest, 'utf8')).species ?? {}).length;
+}
+
 function walk(dir) {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
@@ -66,8 +91,9 @@ function walk(dir) {
   });
 }
 
-// Big sound-ID files are cached on first use instead of at install.
-const onDemand = (f) => /[\\/](models|vendor[\\/]litert)[\\/]/.test(relative(dist, f).replace(/^/, '/'));
+// Big sound-ID files and the watercolours are cached on first use (or via
+// Settings → Download species photos) instead of at install.
+const onDemand = (f) => /[\\/](models|vendor[\\/]litert|art)[\\/]/.test(relative(dist, f).replace(/^/, '/'));
 const files = walk(dist).filter((f) => !f.endsWith('sw.js') && !f.endsWith('LICENSE') && !onDemand(f)).sort();
 const swPath = join(dist, 'sw.js');
 const hash = createHash('sha256').update(readFileSync(swPath));

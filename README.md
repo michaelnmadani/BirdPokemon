@@ -5,7 +5,9 @@ bird, identify it, and it joins your collection with the date and place you
 saw it. Fill the album one species at a time — 500 Australian birds to find.
 
 - **Collection** — every species as a card; the ones you haven't found yet
-  show in greyscale until you photograph them. Choose small, medium or large
+  show in greyscale until you photograph them. Field guide pictures can be the
+  photo or a watercolour painted from it (see
+  [`scripts/artwork/`](scripts/artwork/README.md)). Choose small, medium or large
   pictures, and group the album by bird group, family, size or colour.
 - **Field Guide** — search and filter all 500 species by size, colour and
   family, or browse by group (flightless birds, parrots & cockatoos, birds of
@@ -27,6 +29,10 @@ Everything works offline and stays on the phone. No account needed.
 
 There's also a **web version** in [`web/`](web/) for trying the app on any
 phone or computer before the iOS build is on your device.
+
+**Install on your iPhone without the App Store:** download the `.ipa` from
+this repo's Releases and sideload it with your own Apple ID — see
+[SIDELOADING.md](SIDELOADING.md).
 
 ## Quick start
 
@@ -67,9 +73,10 @@ testing on a phone.
 | `web/` | Offline web app (no framework, no runtime dependencies) |
 | `scripts/seed-ebird/` | Node scripts that maintain the species data |
 | `scripts/train-model/` | Create ML script to train the bird-identification model |
+| `scripts/artwork/` | Paints a watercolour of every species photo with a local AI Image Studio |
 | `scripts/birdnet/` | Fetch the BirdNET sound-ID model (`models/birdnet/`) and the iOS TensorFlow Lite runtime (`Vendor/`) — neither is in git |
 | `project.yml`, `Config/` | XcodeGen project definition and build settings |
-| `.github/workflows/` | CI for iOS and web, TestFlight upload, photo fetching |
+| `.github/workflows/` | CI for iOS and web, sideload `.ipa` builds, TestFlight upload, photo and call fetching |
 
 ## How it fits together
 
@@ -82,9 +89,14 @@ testing on a phone.
   two JPEGs per sighting, included in iPhone backups). "Collected" is worked
   out from your sightings, so deleting your only sighting of a species
   un-collects it.
-- **Identification**: the app uses `BirdClassifier_AU.mlmodel` if one is
-  bundled; until then you choose the species from the field guide. Training
-  a model: [`scripts/train-model/README.md`](scripts/train-model/README.md).
+- **Photo identification**: after you take or pick a photo, a MobileNet V2
+  model trained on iNaturalist bird photos (Google, Apache-2.0, 3.5 MB, in
+  `Resources/ML/`) suggests up to three species. It knows ~960 birds worldwide
+  but only **77 of the 500 Australian species**, so it only ever suggests those,
+  says "not sure" when its best guess is a non-Australian bird, and you always
+  confirm. A region-specific Core ML model trained with
+  [`scripts/train-model/`](scripts/train-model/README.md) takes over in the
+  iPhone app if one is bundled.
 - **Bird calls**: `scripts/seed-ebird/fetch-calls.ts` (or the *Fetch bird
   calls* workflow) picks one recording per species — xeno-canto first (set a
   free `XENO_CANTO_API_KEY` secret), else iNaturalist — and stores the link

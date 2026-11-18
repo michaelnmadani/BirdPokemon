@@ -54,8 +54,17 @@ actor SoundIdentifier {
         try interpreter.run(samples)
     }
 
-    /// Decode an audio file to 48 kHz mono.
-    static func decode(url: URL) throws -> [Float] {
+    /// Decode an audio file to 48 kHz mono. Core Audio reads WAV, AIFF, MP3,
+    /// M4A/AAC, CAF and FLAC; AMR voice recordings (raw .amr, or inside .3gp)
+    /// go through `AMRDecoder` since iOS can't decode them. `sourceRate` is the
+    /// recording's own rate — 8 or 16 kHz for AMR.
+    static func decode(url: URL) throws -> (samples: [Float], sourceRate: Double) {
+        let data = try Data(contentsOf: url, options: .mappedIfSafe)
+        if let amr = AMRDecoder.amrFile(from: data) {
+            let (samples, rate) = try AMRDecoder.decode(amr)
+            guard Double(samples.count) / rate <= maxFileSeconds else { throw SoundIDError.tooLong }
+            return (SoundIDCore.resample(samples, from: rate), rate)
+        }
         let file = try AVAudioFile(forReading: url)
         let format = file.processingFormat // deinterleaved Float32
         guard Double(file.length) / format.sampleRate <= maxFileSeconds else { throw SoundIDError.tooLong }
@@ -66,7 +75,7 @@ actor SoundIdentifier {
         guard let data = buffer.floatChannelData else { throw SoundIDError.modelFailed("audio format") }
         let frames = Int(buffer.frameLength)
         let channels = (0..<Int(format.channelCount)).map { Array(UnsafeBufferPointer(start: data[$0], count: frames)) }
-        return SoundIDCore.resample(SoundIDCore.mixToMono(channels), from: format.sampleRate)
+        return (SoundIDCore.resample(SoundIDCore.mixToMono(channels), from: format.sampleRate), format.sampleRate)
     }
 }
 
@@ -78,7 +87,9 @@ final class TFLiteInterpreter {
     private let interpreter: OpaquePointer
     private let outputCount: Int
 
-    init(modelPath: String, outputCount: Int, threads: Int32 = 2) throws {
+    /// `outputCount` is the float output length for `run(_:)`; byte models
+    /// using `run(bytes:)` can leave it 0.
+    init(modelPath: String, outputCount: Int = 0, threads: Int32 = 2) throws {
         guard let model = TfLiteModelCreateFromFile(modelPath) else {
             throw SoundIdentifier.SoundIDError.modelFailed("load")
         }
@@ -122,6 +133,26 @@ final class TFLiteInterpreter {
             throw SoundIdentifier.SoundIDError.modelFailed("output size")
         }
         var output = [Float](repeating: 0, count: outputCount)
+        let status = output.withUnsafeMutableBytes { TfLiteTensorCopyToBuffer(outputTensor, $0.baseAddress, $0.count) }
+        guard status == kTfLiteOk else { throw SoundIdentifier.SoundIDError.modelFailed("output") }
+        return output
+    }
+
+    /// For quantized (uint8) models: raw input bytes in, raw output bytes out.
+    func run(bytes input: [UInt8]) throws -> [UInt8] {
+        guard let inputTensor = TfLiteInterpreterGetInputTensor(interpreter, 0),
+              TfLiteTensorByteSize(inputTensor) == input.count else {
+            throw SoundIdentifier.SoundIDError.modelFailed("input size")
+        }
+        let copied = input.withUnsafeBytes { TfLiteTensorCopyFromBuffer(inputTensor, $0.baseAddress, $0.count) }
+        guard copied == kTfLiteOk else { throw SoundIdentifier.SoundIDError.modelFailed("input") }
+        guard TfLiteInterpreterInvoke(interpreter) == kTfLiteOk else {
+            throw SoundIdentifier.SoundIDError.modelFailed("invoke")
+        }
+        guard let outputTensor = TfLiteInterpreterGetOutputTensor(interpreter, 0) else {
+            throw SoundIdentifier.SoundIDError.modelFailed("output")
+        }
+        var output = [UInt8](repeating: 0, count: Int(TfLiteTensorByteSize(outputTensor)))
         let status = output.withUnsafeMutableBytes { TfLiteTensorCopyToBuffer(outputTensor, $0.baseAddress, $0.count) }
         guard status == kTfLiteOk else { throw SoundIdentifier.SoundIDError.modelFailed("output") }
         return output

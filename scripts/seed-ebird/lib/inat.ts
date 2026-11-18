@@ -16,6 +16,7 @@ export type INatPhoto = {
 export type INatObservation = {
   id: number;
   photos: INatPhoto[];
+  user?: { login: string; name?: string | null } | null;
 };
 
 type INatResponse = {
@@ -45,6 +46,14 @@ export function cleanAttribution(raw: string | null | undefined): string | null 
     .replace(/\s*\((CC[^)]*|public domain)\)\s*$/i, "")
     .trim();
   return cleaned || null;
+}
+
+/**
+ * Credit line for a photo. CC0 photos carry only "no rights reserved" as
+ * their attribution, so fall back to the observer's name.
+ */
+export function photoCreditFor(photo: INatPhoto, observer?: INatObservation["user"]): string | null {
+  return cleanAttribution(photo.attribution) ?? (observer?.name?.trim() || observer?.login || null);
 }
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

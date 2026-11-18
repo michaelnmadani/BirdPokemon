@@ -1,6 +1,7 @@
-// Photo (or no photo) → choose species → confirm → saved. Mirrors the iOS
-// capture flow; the web version always identifies by hand (no on-device model).
+// Photo (or no photo) → choose species (with suggestions from the photo
+// identifier) → confirm → saved. Mirrors the iOS capture flow.
 import { readExif } from '../exif.js';
+import { identifyPhoto } from '../photoid.js';
 import { processPhoto } from '../images.js';
 import { REGIONS, emptyCriteria, matches } from '../model.js';
 import { formatCoord, formatDate, h, speciesImage, toast } from '../ui.js';
@@ -13,6 +14,7 @@ function freshState() {
     previewURL: null,
     source: null,           // 'camera' | 'library' | 'none' (no photo) | 'sound' (BirdNET)
     soundConfidence: null,
+    photoID: null,          // { status: 'loading' | 'done' | 'failed', suggestions, unsure, message }
     takenAt: null,
     location: { status: 'none' },
     species: null,
@@ -115,20 +117,59 @@ function startStep(app, state, rerender) {
 
 // ── Step 2: which species? ──────────────────────────────────────────────────
 
+/** Starts identifying the photo once; redraws when the suggestions arrive. */
+function startPhotoID(app, state, rerender) {
+  if (!state.file || state.photoID) return;
+  state.photoID = { status: 'loading' };
+  const file = state.file;
+  identifyPhoto(file, app.catalog.species(app.region))
+    .then((result) => {
+      if (state.file !== file) return; // photo discarded meanwhile
+      state.photoID = { status: 'done', ...result };
+    })
+    .catch((err) => {
+      if (state.file !== file) return;
+      state.photoID = { status: 'failed', message: err.message };
+    })
+    .finally(() => {
+      if (state.file === file && state.step === 'pick') rerender();
+    });
+}
+
+function photoSuggestions(app, state, choose) {
+  const id = state.photoID;
+  if (!id) return null;
+  if (id.status === 'loading') return h('p.identifying', h('span.pulse', { 'aria-hidden': 'true' }), ' Identifying the bird…');
+  if (id.status === 'failed') return h('p.muted.small', `Photo identification isn’t available right now (${id.message}). Choose the species below.`);
+  if (!id.suggestions.length) {
+    return h('p.notice', 'Couldn’t recognise this bird. The identifier knows only some Australian birds (77 of 500), so choose it below.');
+  }
+  return h('div.suggestions',
+    h('h2', id.unsure ? 'Possible matches' : 'Suggestions'),
+    id.unsure ? h('p.muted.small', 'Not sure — this may be a bird the identifier doesn’t know. Compare with your photo before choosing.') : null,
+    h('ul.rows', id.suggestions.map(({ code, confidence }) => {
+      const s = app.catalog.get(code);
+      return s ? h('li.suggestion', speciesRow(app, s, null, () => choose(s)), h('span.pct', `${Math.round(confidence * 100)}%`)) : null;
+    })),
+    h('p.muted.small', 'Suggestions are only a guide — pick the bird you actually saw.'));
+}
+
 function pickStep(app, state, rerender) {
   const species = app.catalog.species(app.region);
+  startPhotoID(app, state, rerender);
+  const choose = (s) => {
+    state.species = s;
+    state.step = 'confirm';
+    rerender();
+    window.scrollTo(0, 0);
+  };
   const list = h('ul.rows');
   const criteria = emptyCriteria();
 
   const renderList = () => {
     criteria.search = state.search;
     const results = species.filter((s) => matches(criteria, s)).slice(0, 200);
-    list.replaceChildren(...results.map((s) => h('li', speciesRow(s, app.store.isCollected(s.ebirdCode), null, () => {
-      state.species = s;
-      state.step = 'confirm';
-      rerender();
-      window.scrollTo(0, 0);
-    }))));
+    list.replaceChildren(...results.map((s) => h('li', speciesRow(app, s, null, () => choose(s)))));
     if (!results.length) list.append(h('li.empty', 'No matches. Try the bird’s family, e.g. “honeyeater”.'));
   };
 
@@ -144,6 +185,7 @@ function pickStep(app, state, rerender) {
       h('button.back', { type: 'button', onclick: () => { reset(app, state); rerender(); } }, 'Discard'),
       h('h1', 'Which bird?')),
     state.previewURL ? h('img.preview', { src: state.previewURL, alt: 'Your photo' }) : null,
+    photoSuggestions(app, state, choose),
     h('p.muted.small', state.previewURL ? 'Choose the species you photographed.' : 'Choose the species you saw or heard.'),
     search,
     list,
@@ -189,7 +231,10 @@ function confirmStep(app, state, rerender) {
         locationSource: loc?.source ?? null,
         notes: state.notes.trim(),
         identifiedBy: state.source === 'sound' ? 'sound' : null,
-        mlTop: state.source === 'sound' ? { code: s.ebirdCode, confidence: state.soundConfidence } : null,
+        // The identifier's top pick, kept to measure how often people choose differently.
+        mlTop: state.source === 'sound'
+          ? { code: s.ebirdCode, confidence: state.soundConfidence }
+          : (state.photoID?.suggestions?.[0] ?? null),
       });
       const total = app.catalog.species(app.region).length;
       const have = app.catalog.species(app.region).filter((x) => app.store.isCollected(x.ebirdCode)).length;
@@ -213,7 +258,7 @@ function confirmStep(app, state, rerender) {
       h('h1', 'Save sighting')),
     hasPhoto
       ? h('img.preview', { src: state.previewURL, alt: 'Your photo' })
-      : speciesImage(s.thumbnailURL, s.commonName, 'preview-species'),
+      : speciesImage(app.catalog.picture(s), s.commonName, 'preview-species'),
     h('div.form',
       h('div.field', h('span.label', 'Species'),
         h('strong', s.commonName), h('em.muted.small', s.scientificName),

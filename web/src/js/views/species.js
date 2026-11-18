@@ -1,4 +1,4 @@
-import { COLORS, REGIONS, callCredit, photoCredit, sizeInfo } from '../model.js';
+import { COLORS, REGIONS, artCredit, callCredit, photoCredit, sizeInfo } from '../model.js';
 import { backButton, colorDot, h, speciesImage } from '../ui.js';
 import { sightingRow } from './sightings.js';
 
@@ -40,6 +40,23 @@ function groupsBlock(app, code) {
     h('a.pill', { href: `#/group/${encodeURIComponent(g.id)}` }, g.kind === 'genus' ? `${g.name} (${g.genus})` : `${g.emoji} ${g.name}`)));
 }
 
+/** The species picture with its credit; a watercolour can be flipped to the photo it was painted from. */
+function heroPicture(app, species) {
+  const art = app.catalog.art.get(species.ebirdCode);
+  const wrap = h('div.hero-picture');
+  const show = (painting) => {
+    const credit = painting ? artCredit(art) : photoCredit(species);
+    wrap.replaceChildren(
+      speciesImage(painting ? art.url : species.thumbnailURL, species.commonName, 'hero'),
+      h('div.credit-row',
+        credit ? h('p.credit', painting ? credit : `Photo: ${credit} via iNaturalist`) : h('span'),
+        art ? h('button.link.small', { type: 'button', onclick: () => show(!painting) },
+          painting ? 'Show photo' : 'Show watercolour') : null));
+  };
+  show(Boolean(art) && app.catalog.picture(species) === art.url);
+  return wrap;
+}
+
 export function speciesView(app, code) {
   const species = app.catalog.get(code);
   if (!species) {
@@ -48,12 +65,10 @@ export function speciesView(app, code) {
   const collected = app.store.isCollected(code);
   const mine = app.store.ofSpecies(code);
   const size = sizeInfo(species.sizeCategory);
-  const credit = photoCredit(species);
 
   return h('section.view.detail',
     h('header.top', backButton(app, 'guide')),
-    speciesImage(species.thumbnailURL, species.commonName, 'hero'),
-    credit ? h('p.credit', `Photo: ${credit} via iNaturalist`) : null,
+    heroPicture(app, species),
     h('h1', species.commonName),
     h('p.sci', species.scientificName),
     h('div.pills',

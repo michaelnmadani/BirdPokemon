@@ -9,7 +9,7 @@ struct SightingRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             // Sightings logged without a photo show the field guide picture.
-            AsyncRemoteImage(url: store.thumbnailURL(for: sighting) ?? catalog.species(code: sighting.speciesCode)?.thumbnail)
+            AsyncRemoteImage(url: store.thumbnailURL(for: sighting) ?? catalog.picture(for: catalog.species(code: sighting.speciesCode)))
                 .frame(width: 64, height: 64)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 

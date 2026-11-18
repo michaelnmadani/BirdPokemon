@@ -66,6 +66,7 @@ struct CollectionView: View {
                                     NavigationLink(value: species) {
                                         CollectionCell(
                                             species: species,
+                                            picture: catalog.picture(for: species),
                                             isCaptured: store.isCaptured(species),
                                             myPhoto: store.latestSighting(of: species.ebirdCode).flatMap(store.thumbnailURL(for:)),
                                             compact: gridSize == .small
@@ -180,6 +181,8 @@ struct CollectionView: View {
 
 private struct CollectionCell: View {
     let species: Species
+    /// Field guide picture (watercolour or photo).
+    let picture: URL?
     let isCaptured: Bool
     let myPhoto: URL?
     var compact = false
@@ -190,7 +193,7 @@ private struct CollectionCell: View {
                 .aspectRatio(1, contentMode: .fit)
                 .overlay {
                     // Not collected yet: the field guide photo in greyscale.
-                    AsyncRemoteImage(url: isCaptured ? (myPhoto ?? species.thumbnail) : species.thumbnail)
+                    AsyncRemoteImage(url: isCaptured ? (myPhoto ?? picture) : picture)
                         .grayscale(isCaptured ? 0 : 1)
                         .opacity(isCaptured ? 1 : 0.85)
                 }

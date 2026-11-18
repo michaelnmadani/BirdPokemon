@@ -11,7 +11,7 @@
  *   --dry-run               print what would change without writing
  */
 import { hasFlag, parseArg, readBundle, writeBundle, type BundledSpecies } from "./lib/bundle.ts";
-import { DISPLAY_LICENCES, cleanAttribution, observations, photoSize, sleep, type INatPhoto } from "./lib/inat.ts";
+import { DISPLAY_LICENCES, observations, photoCreditFor, photoSize, sleep, type INatObservation, type INatPhoto } from "./lib/inat.ts";
 
 const region = (parseArg("region") ?? "AU").toUpperCase();
 const limit = parseArg("limit") ? parseInt(parseArg("limit")!, 10) : Infinity;
@@ -23,7 +23,9 @@ function photoIdFromUrl(url: string | null): number | null {
   return match ? Number(match[1]) : null;
 }
 
-async function candidatePhotos(scientificName: string): Promise<INatPhoto[]> {
+type Candidate = INatPhoto & { observer: INatObservation["user"] };
+
+async function candidatePhotos(scientificName: string): Promise<Candidate[]> {
   const data = await observations({
     taxon_name: scientificName,
     quality_grade: "research",
@@ -32,7 +34,7 @@ async function candidatePhotos(scientificName: string): Promise<INatPhoto[]> {
     order_by: "votes",
     per_page: "20",
   });
-  return data.results.flatMap((obs) => obs.photos).filter((p) => {
+  return data.results.flatMap((obs) => obs.photos.map((p) => ({ ...p, observer: obs.user }))).filter((p) => {
     const licence = p.license_code?.toLowerCase();
     return licence && DISPLAY_LICENCES.includes(licence);
   });
@@ -62,7 +64,7 @@ async function main() {
         console.log("✗ no CC photo found");
       } else {
         sp.thumbnailURL = photoSize(chosen.url, "medium");
-        sp.thumbnailAttribution = cleanAttribution(chosen.attribution);
+        sp.thumbnailAttribution = photoCreditFor(chosen, chosen.observer);
         sp.thumbnailLicense = chosen.license_code?.toLowerCase() ?? null;
         updated++;
         console.log(`✓ ${sp.thumbnailAttribution ?? "(no credit)"} [${sp.thumbnailLicense}]`);

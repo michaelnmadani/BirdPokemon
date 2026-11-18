@@ -174,7 +174,7 @@ struct NearbyView: View {
 
     private func row(_ entry: NearbyEntry) -> some View {
         HStack(spacing: 12) {
-            AsyncRemoteImage(url: entry.species?.thumbnail)
+            AsyncRemoteImage(url: catalog.picture(for: entry.species))
                 .frame(width: 56, height: 56)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(alignment: .topTrailing) {

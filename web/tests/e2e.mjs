@@ -11,6 +11,9 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
+// Let page.route() see the service worker's requests too (the watercolour
+// fixtures are fetched through it once it controls the page).
+process.env.PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS ??= '1';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = (name) => resolve(root, 'tests/fixtures', name);
 const port = 5000 + Math.floor(Math.random() * 1000);
@@ -44,6 +47,11 @@ await context.route('**/data/taxonomy_AU.json', async (route) => {
   await route.fulfill({ response: resp, json: species });
 });
 await context.route('https://calls.test/**', (route) => route.fulfill({ path: fixture('call.wav'), contentType: 'audio/wav' }));
+// Watercolours for two species (whatever paintings this checkout has are ignored).
+await context.route('**/data/art_AU.json', (route) => route.fulfill({ path: fixture('art_AU.json'), contentType: 'application/json' }));
+await context.route('**/art/AU/*.jpg', (route) => route.fulfill({
+  path: fixture(`art/${new URL(route.request().url()).pathname.split('/').pop()}`), contentType: 'image/jpeg',
+}));
 const page = await context.newPage();
 page.setDefaultTimeout(20000);
 const errors = [];
@@ -132,6 +140,41 @@ try {
     await page.getByText('Not collected yet').waitFor();
   });
 
+  await step('Watercolour shows with its credit and flips to the photo', async () => {
+    const hero = page.locator('.hero-picture');
+    assert.match(await hero.locator('img').getAttribute('src'), /art\/AU\/laukoo1\.jpg$/);
+    await hero.getByText('Watercolour after a photo by © Kooka Photographer · CC BY-SA via iNaturalist').waitFor();
+    await hero.getByRole('button', { name: 'Show photo' }).click();
+    assert.match(await hero.locator('img').getAttribute('src'), /inaturalist/);
+    await hero.getByText(/^Photo: .* via iNaturalist$/).waitFor();
+    await hero.getByRole('button', { name: 'Show watercolour' }).click();
+    assert.match(await hero.locator('img').getAttribute('src'), /laukoo1\.jpg$/);
+  });
+
+  await step('Pictures can switch to photos, and every credit is listed', async () => {
+    await go('Collection');
+    const emu = page.locator('.card', { hasText: 'Emu' }).first().locator('img');
+    // Not collected yet, so the card shows the field-guide picture: the watercolour (in greyscale).
+    assert.match(await emu.getAttribute('src'), /art\/AU\/emu1\.jpg$/);
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('radio', { name: 'Photo' }).click();
+    await go('Collection');
+    assert.match(await page.locator('.card', { hasText: 'Emu' }).first().locator('img').getAttribute('src'), /inaturalist/);
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('radio', { name: 'Watercolour' }).click();
+    await page.getByRole('link', { name: 'Photo, painting & sound credits' }).click();
+    await page.getByRole('heading', { name: 'Credits' }).waitFor();
+    await page.getByText(/496 species photos by iNaturalist contributors, .* and 2 watercolours/).waitFor();
+    await page.getByRole('searchbox', { name: 'Search credits' }).fill('kookaburra');
+    const kooka = page.locator('.credit-entry', { hasText: 'Laughing Kookaburra' });
+    await kooka.getByText('Watercolour:').waitFor();
+    await kooka.getByRole('link', { name: 'CC BY-SA' }).waitFor();
+    await kooka.getByRole('link', { name: '© Test Recordist via xeno-canto' }).waitFor();
+    await kooka.getByText('Watercolour: adapted from the photo above').waitFor();
+    await kooka.getByRole('link', { name: 'Laughing Kookaburra' }).click();
+    await page.getByRole('heading', { name: 'Laughing Kookaburra' }).waitFor();
+  });
+
   await step('Hear its call plays the recording', async () => {
     await page.getByText('Recording: © Test Recordist · CC BY-NC via xeno-canto').waitFor();
     await page.getByRole('button', { name: /Hear the call of the Laughing Kookaburra/ }).click();
@@ -141,6 +184,21 @@ try {
     });
     await page.getByRole('button', { name: /Hear the call/ }).click();
     await page.waitForFunction(() => document.querySelector('.call-player audio').paused);
+  });
+
+  await step('A bird photo gets identification suggestions', async () => {
+    await go('Capture');
+    await page.locator('#library-input').setInputFiles(fixture('kookaburra.jpg'));
+    await page.getByRole('heading', { name: 'Which bird?' }).waitFor();
+    const suggestion = page.locator('.suggestions .suggestion').first();
+    await suggestion.waitFor({ timeout: 60_000 });
+    assert.match(await suggestion.innerText(), /Laughing Kookaburra[\s\S]*\b([5-9]\d|100)%/);
+    await suggestion.locator('.species-row').click();
+    await page.getByRole('heading', { name: 'Save sighting' }).waitFor();
+    await page.getByText('Laughing Kookaburra').first().waitFor();
+    await page.getByRole('button', { name: /‹ Species/ }).click();
+    await page.getByRole('button', { name: 'Discard' }).click();
+    await page.getByText('Spot a bird?').waitFor();
   });
 
   await step('Capture from library uses the photo location', async () => {
@@ -289,7 +347,7 @@ try {
       await page.getByLabel('Only birds in the field guide').uncheck();
       await page.locator('#sound-file').setInputFiles(soundscape);
       await page.getByRole('heading', { name: 'Heard' }).waitFor({ timeout: 120_000 });
-      await page.getByText(/s of audio analysed from soundscape\.wav/).waitFor({ timeout: 120_000 });
+      await page.getByText('2 min of audio analysed from soundscape.wav.').waitFor({ timeout: 120_000 });
       const chickadee = page.locator('.species-row', { hasText: 'Black-capped Chickadee' });
       await chickadee.getByText('Not in the field guide').waitFor();
       assert.equal(await chickadee.getByRole('button', { name: 'Log it' }).count(), 0);
@@ -297,6 +355,18 @@ try {
       await page.getByLabel('Only birds in the field guide').check();
       assert.equal(await chickadee.count(), 0, 'field-guide filter hides North American birds');
       await page.getByText(/untick “Only birds in the field guide”/).waitFor();
+    });
+
+    await step('Voice-recorder AMR files (raw and 3GP) are analysed, with a quality warning', async () => {
+      for (const [file, rate] of [['noise-nb.amr', '8 kHz'], ['noise-wb.amr', '16 kHz'], ['noise-nb.3gp', '8 kHz']]) {
+        await page.locator('#sound-file').setInputFiles(fixture(file));
+        await page.getByText(`4s of audio analysed from ${file}.`).waitFor({ timeout: 60_000 });
+        await page.getByText(`This recording is voice-call quality (${rate})`).waitFor();
+      }
+      // A full-quality recording clears the warning again.
+      await page.locator('#sound-file').setInputFiles(fixture('call.wav'));
+      await page.getByText(/of audio analysed from call\.wav\./).waitFor({ timeout: 60_000 });
+      assert.equal(await page.getByText(/voice-call quality/).count(), 0);
     });
 
     await step('Log a bird identified by sound', async () => {
