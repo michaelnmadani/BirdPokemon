@@ -2,11 +2,11 @@
 // The model (~52 MB) downloads on first use and is kept in Cache Storage,
 // so after that it works offline. Model: CC BY-NC-SA 4.0, Cornell Lab of
 // Ornithology & Chemnitz University of Technology.
+import { liteRt } from './litert-runtime.js';
 import { SAMPLE_RATE, WINDOW, amrFrom3gp, amrKind, mapLabels, mixToMono, parseLabels, resample } from './soundid-core.js';
 
 export const MODEL_URL = new URL('../models/birdnet/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite', import.meta.url).href;
 export const LABELS_URL = new URL('../models/birdnet/BirdNET_GLOBAL_6K_V2.4_Labels.txt', import.meta.url).href;
-const WASM_DIR = new URL('../vendor/litert/', import.meta.url).href;
 export const CACHE_NAME = 'birdnet-v2.4';
 export const MODEL_MB = 52;
 const MAX_FILE_SECONDS = 10 * 60;
@@ -65,8 +65,7 @@ async function cachedBytes(url, onProgress) {
 export class SoundID {
   /** Loads runtime, model and labels. `catalogSpecies` maps classes to field-guide codes. */
   static async load(catalogSpecies, onProgress) {
-    const { loadLiteRt, loadAndCompile, Tensor } = await import('../vendor/litert/litert.js');
-    await loadLiteRt(WASM_DIR);
+    const { loadAndCompile, Tensor } = await liteRt();
     const [modelBytes, labelBytes] = await Promise.all([
       cachedBytes(MODEL_URL, onProgress),
       cachedBytes(LABELS_URL),

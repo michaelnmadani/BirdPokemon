@@ -112,7 +112,7 @@ jobs:
       - name: Check app bundle contents
         run: |
           APP=build/dd/Build/Products/Debug-iphonesimulator/DownUnderBirdCollector.app
-          for f in taxonomy_AU.json groups.json PrivacyInfo.xcprivacy Assets.car Info.plist BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite BirdNET_GLOBAL_6K_V2.4_Labels.txt; do
+          for f in taxonomy_AU.json groups.json PrivacyInfo.xcprivacy Assets.car Info.plist BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite BirdNET_GLOBAL_6K_V2.4_Labels.txt BirdPhotoClassifier.tflite BirdPhotoClassifier_labels.txt; do
             test -e "$APP/$f" && echo "found $f" || { echo "::error::$f missing from app bundle"; exit 1; }
           done
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist"

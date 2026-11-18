@@ -69,6 +69,6 @@ export function creditsView(app) {
     search,
     list,
     h('h2', 'Also'),
-    h('p.muted.small', 'Species names and taxonomy: eBird / Clements Checklist (Cornell Lab of Ornithology). Sound identification: BirdNET (K. Lisa Yang Center for Conservation Bioacoustics, Cornell Lab of Ornithology & Chemnitz University of Technology), CC BY-NC-SA 4.0. Maps © OpenStreetMap contributors. Size estimates from AVONET (CC BY 4.0).'),
+    h('p.muted.small', 'Species names and taxonomy: eBird / Clements Checklist (Cornell Lab of Ornithology). Photo identification: MobileNet V2 trained on iNaturalist bird photos (Google, Apache-2.0). Sound identification: BirdNET (K. Lisa Yang Center for Conservation Bioacoustics, Cornell Lab of Ornithology & Chemnitz University of Technology), CC BY-NC-SA 4.0. Maps © OpenStreetMap contributors. Size estimates from AVONET (CC BY 4.0).'),
   );
 }

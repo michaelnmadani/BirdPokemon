@@ -186,6 +186,21 @@ try {
     await page.waitForFunction(() => document.querySelector('.call-player audio').paused);
   });
 
+  await step('A bird photo gets identification suggestions', async () => {
+    await go('Capture');
+    await page.locator('#library-input').setInputFiles(fixture('kookaburra.jpg'));
+    await page.getByRole('heading', { name: 'Which bird?' }).waitFor();
+    const suggestion = page.locator('.suggestions .suggestion').first();
+    await suggestion.waitFor({ timeout: 60_000 });
+    assert.match(await suggestion.innerText(), /Laughing Kookaburra[\s\S]*\b([5-9]\d|100)%/);
+    await suggestion.locator('.species-row').click();
+    await page.getByRole('heading', { name: 'Save sighting' }).waitFor();
+    await page.getByText('Laughing Kookaburra').first().waitFor();
+    await page.getByRole('button', { name: /‹ Species/ }).click();
+    await page.getByRole('button', { name: 'Discard' }).click();
+    await page.getByText('Spot a bird?').waitFor();
+  });
+
   await step('Capture from library uses the photo location', async () => {
     await go('Capture');
     await page.locator('#library-input').setInputFiles(fixture('bird-with-gps.jpg'));

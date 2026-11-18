@@ -122,6 +122,8 @@ targets:
         buildPhase: resources
       - path: web/tests/fixtures/noise-nb.3gp
         buildPhase: resources
+      - path: web/tests/fixtures/kookaburra.jpg
+        buildPhase: resources
     configFiles:
       Debug: Config/App.xcconfig
       Release: Config/App.xcconfig

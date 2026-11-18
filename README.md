@@ -89,9 +89,14 @@ testing on a phone.
   two JPEGs per sighting, included in iPhone backups). "Collected" is worked
   out from your sightings, so deleting your only sighting of a species
   un-collects it.
-- **Identification**: the app uses `BirdClassifier_AU.mlmodel` if one is
-  bundled; until then you choose the species from the field guide. Training
-  a model: [`scripts/train-model/README.md`](scripts/train-model/README.md).
+- **Photo identification**: after you take or pick a photo, a MobileNet V2
+  model trained on iNaturalist bird photos (Google, Apache-2.0, 3.5 MB, in
+  `Resources/ML/`) suggests up to three species. It knows ~960 birds worldwide
+  but only **77 of the 500 Australian species**, so it only ever suggests those,
+  says "not sure" when its best guess is a non-Australian bird, and you always
+  confirm. A region-specific Core ML model trained with
+  [`scripts/train-model/`](scripts/train-model/README.md) takes over in the
+  iPhone app if one is bundled.
 - **Bird calls**: `scripts/seed-ebird/fetch-calls.ts` (or the *Fetch bird
   calls* workflow) picks one recording per species — xeno-canto first (set a
   free `XENO_CANTO_API_KEY` secret), else iNaturalist — and stores the link

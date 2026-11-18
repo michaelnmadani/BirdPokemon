@@ -46,7 +46,7 @@ struct CreditsView: View {
                 }
             }
             Section("Also") {
-                Text("Species names and taxonomy: eBird / Clements Checklist (Cornell Lab of Ornithology). Sound identification: BirdNET (K. Lisa Yang Center for Conservation Bioacoustics, Cornell Lab of Ornithology & Chemnitz University of Technology), CC BY-NC-SA 4.0. Size estimates from AVONET (CC BY 4.0).")
+                Text("Species names and taxonomy: eBird / Clements Checklist (Cornell Lab of Ornithology). Photo identification: MobileNet V2 trained on iNaturalist bird photos (Google, Apache-2.0). Sound identification: BirdNET (K. Lisa Yang Center for Conservation Bioacoustics, Cornell Lab of Ornithology & Chemnitz University of Technology), CC BY-NC-SA 4.0. Size estimates from AVONET (CC BY 4.0).")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

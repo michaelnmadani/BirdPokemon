@@ -341,3 +341,13 @@ label.btn[aria-disabled="true"] { opacity: 0.55; pointer-events: none; }
 .credit-entry { background: var(--surface); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; }
 .credit-entry > a { color: var(--text); text-decoration: none; }
 .credit-entry .credit { font-size: 0.78rem; }
+
+/* Photo identification suggestions */
+.suggestions { margin: 4px 0 12px; }
+.suggestions h2 { margin: 6px 0; font-size: 1rem; }
+.suggestion { position: relative; }
+.suggestion .pct {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  font-weight: 700; font-size: 0.85rem; color: var(--accent); pointer-events: none;
+}
+.identifying { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.9rem; }

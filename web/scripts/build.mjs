@@ -56,6 +56,13 @@ cpSync(join(amr, 'decode-amr.js'), join(dist, 'vendor/amr/decode-amr.js'));
 cpSync(join(amr, 'src/amr.wasm.js'), join(dist, 'vendor/amr/src/amr.wasm.js'));
 cpSync(join(amr, 'LICENSE'), join(dist, 'vendor/amr/LICENSE'));
 
+// Photo identification model (Apache-2.0), kept in the repo.
+const photoModel = resolve(root, '../DownUnderBirdCollector/Resources/ML');
+mkdirSync(join(dist, 'models/photo'), { recursive: true });
+for (const f of ['BirdPhotoClassifier.tflite', 'BirdPhotoClassifier_labels.txt', 'LICENSE-BirdPhotoClassifier.txt']) {
+  cpSync(join(photoModel, f), join(dist, 'models/photo', f));
+}
+
 // BirdNET model (CC BY-NC-SA 4.0), fetched by scripts/birdnet/fetch-model.sh.
 const birdnetFiles = ['BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite', 'BirdNET_GLOBAL_6K_V2.4_Labels.txt', 'LICENSE-BirdNET.txt'];
 const hasBirdnet = birdnetFiles.every((f) => existsSync(join(birdnet, f)));

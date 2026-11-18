@@ -109,7 +109,7 @@ export function settingsView(app) {
 
     h('h2', 'About'),
     h('a.btn.wide', { href: '#/credits' }, 'Photo, painting & sound credits'),
-    h('p.muted.small', 'This is the web test version of Down Under Bird Collector. Species data from eBird (Cornell Lab of Ornithology). Species photos by iNaturalist contributors, credited on each species page. Map © OpenStreetMap contributors. Bird calls from xeno-canto and iNaturalist recordists, credited under each player. Sound ID by BirdNET (Cornell Lab of Ornithology & Chemnitz University of Technology), model licensed CC BY-NC-SA 4.0.'),
+    h('p.muted.small', 'This is the web test version of Down Under Bird Collector. Species data from eBird (Cornell Lab of Ornithology). Species photos by iNaturalist contributors, credited on each species page. Map © OpenStreetMap contributors. Bird calls from xeno-canto and iNaturalist recordists, credited under each player. Photo suggestions by a MobileNet V2 model trained on iNaturalist photos (Google, Apache-2.0). Sound ID by BirdNET (Cornell Lab of Ornithology & Chemnitz University of Technology), model licensed CC BY-NC-SA 4.0.'),
     app.catalog.issues.length ? h('ul.issues', app.catalog.issues.map((i) => h('li', i))) : null,
     h('p.muted.small', `Build ${document.documentElement.dataset.build ?? 'dev'}`),
   );
