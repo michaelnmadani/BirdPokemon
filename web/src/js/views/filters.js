@@ -6,7 +6,7 @@ import { h } from '../ui.js';
  * Returns { node, update(count) }. `onChange` runs whenever search or
  * filters change; the caller re-renders its results.
  */
-export function filterBar(criteria, allSpecies, onChange, placeholder = 'Search species') {
+export function filterBar(criteria, allSpecies, onChange, placeholder = 'Search species', extras = null) {
   const count = h('span.muted.small');
   const badge = h('span.badge');
   const clear = h('button.link', { type: 'button', onclick: () => {
@@ -36,7 +36,10 @@ export function filterBar(criteria, allSpecies, onChange, placeholder = 'Search 
   sync();
 
   return {
-    node: h('div.filterbar', search, h('div.row', button, clear, h('span.spacer'), count)),
+    // `extras` (e.g. the collection's grouping and size controls) replace the count on the second row.
+    node: h('div.filterbar',
+      h('div.row.search-row', search, button),
+      extras ? h('div.row.filter-meta', extras, clear) : h('div.row.filter-meta', count, h('span.spacer'), clear)),
     update(n) {
       count.textContent = `${n} species`;
     },

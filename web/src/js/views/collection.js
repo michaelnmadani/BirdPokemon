@@ -41,7 +41,6 @@ export function collectionView(app) {
 
   const results = h('div.results');
   const empty = h('p.empty');
-  const bar = filterBar(state.criteria, species, renderGrid, 'Search your collection');
 
   const segmented = h('div.segmented', { role: 'tablist' }, SHOW.map((opt) =>
     h('button', {
@@ -71,6 +70,12 @@ export function collectionView(app) {
         applySize();
       },
     }, z.label)));
+
+  const bar = filterBar(state.criteria, species, renderGrid, 'Search your collection', [
+    h('label.group-by', h('span.muted.small', 'Group by'), groupSelect),
+    h('span.spacer'),
+    sizePicker,
+  ]);
 
   function applySize() {
     const size = GRID_SIZES.find((z) => z.id === state.gridSize) ?? GRID_SIZES[1];
@@ -103,15 +108,14 @@ export function collectionView(app) {
       h('a.iconbtn', { href: '#/settings', 'aria-label': 'Settings' }, '⚙︎'),
     ),
     h('div.progress-card',
-      h('strong', `${region.flag} ${have} of ${species.length} collected`),
+      h('div.row',
+        h('strong', `${region.flag} ${have} of ${species.length} collected`),
+        h('span.spacer'),
+        h('span.muted.small', have === species.length ? 'Complete!' : `${species.length - have} to find`)),
       h('progress', { max: Math.max(species.length, 1), value: have }),
     ),
     segmented,
     bar.node,
-    h('div.row.grid-options',
-      h('label.group-by', h('span.muted.small', 'Group by'), groupSelect),
-      h('span.spacer'),
-      sizePicker),
     results,
     empty,
   );
@@ -137,6 +141,6 @@ function card(app, species) {
     'aria-label': `${species.commonName}, ${collected ? 'collected' : 'not collected yet'}`,
   },
   image,
-  collected ? h('span.seal', { 'aria-hidden': 'true' }, '✓') : h('span.mystery', { 'aria-hidden': 'true' }, '?'),
+  collected ? h('span.seal', { 'aria-hidden': 'true' }, '✓') : null,
   h('span.name', species.commonName));
 }

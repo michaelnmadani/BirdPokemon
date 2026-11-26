@@ -199,20 +199,12 @@ private struct CollectionCell: View {
                 }
                 .clipShape(RoundedRectangle(cornerRadius: compact ? 10 : 12))
                 .overlay(alignment: .topTrailing) {
-                    Group {
-                        if isCaptured {
-                            CapturedBadgeView()
-                        } else {
-                            Image(systemName: "questionmark")
-                                .font(.caption2.bold())
-                                .foregroundStyle(.white)
-                                .frame(width: 22, height: 22)
-                                .background(Circle().fill(.black.opacity(0.55)))
-                                .overlay(Circle().stroke(.white, lineWidth: 1.5))
-                        }
+                    // Greyscale already marks birds still to find; only collected ones get a badge.
+                    if isCaptured {
+                        CapturedBadgeView()
+                            .scaleEffect(compact ? 0.8 : 1)
+                            .padding(compact ? 3 : 6)
                     }
-                    .scaleEffect(compact ? 0.8 : 1)
-                    .padding(compact ? 3 : 6)
                 }
 
             Text(species.commonName)

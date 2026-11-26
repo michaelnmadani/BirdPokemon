@@ -140,15 +140,17 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--accent), 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min, 104px), 1fr)); gap: 12px; }
 .results[data-size="small"] .grid { gap: 8px; }
 .results[data-size="small"] .card .name { font-size: 0.7rem; }
-.results[data-size="small"] .card :is(.seal, .mystery) { top: 4px; right: 4px; width: 18px; height: 18px; font-size: 0.65rem; border-width: 1px; }
+.results[data-size="small"] .card .seal { top: 4px; right: 4px; width: 18px; height: 18px; font-size: 0.65rem; border-width: 1px; }
 .results[data-size="large"] .card .name { font-size: 0.9rem; }
-.grid-options { margin: 0 0 12px; gap: 10px; }
+.search-row .search { flex: 1; min-width: 0; }
+.search-row .btn { flex: 0 0 auto; }
+.filter-meta { min-height: 28px; gap: 10px; }
 .group-by { display: inline-flex; align-items: center; gap: 8px; }
 .group-by select { width: auto; padding: 6px 10px; }
 .size-picker { display: inline-grid; grid-auto-flow: column; background: var(--surface-2); border-radius: 10px; padding: 3px; }
 .size-picker button {
   border: 0; background: none; font: inherit; font-size: 0.85rem; font-weight: 700; color: var(--muted);
-  min-width: 36px; min-height: 32px; border-radius: 8px; cursor: pointer;
+  min-width: 40px; min-height: 40px; border-radius: 8px; cursor: pointer;
 }
 .size-picker button[aria-checked="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
 .section-head { display: flex; align-items: center; gap: 8px; font-size: 1.05rem; margin: 18px 0 10px; }
@@ -161,13 +163,8 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--accent), 
   background-image: radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--muted) 25%, transparent) 0 22%, transparent 23%);
 }
 .card-img img, .thumb img, .hero img, .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-/* Not collected yet: the photo in greyscale, with a small "?" badge. */
+/* Not collected yet: the photo in greyscale. */
 .card.hidden .card-img img { filter: grayscale(1) contrast(0.95); opacity: 0.85; }
-.card .mystery {
-  position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%;
-  display: grid; place-items: center; font-size: 0.8rem; font-weight: 800;
-  background: rgb(0 0 0 / 0.55); color: #fff; border: 2px solid var(--surface);
-}
 .seal {
   position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%;
   display: grid; place-items: center; font-size: 0.8rem; font-weight: 800;
@@ -193,12 +190,12 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--accent), 
 .row-text { display: grid; min-width: 0; }
 .row-text strong, .row-text em { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .meta { font-size: 0.75rem; color: var(--muted); display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
-.dot { display: inline-block; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--text) 25%, transparent); vertical-align: middle; }
+.dot { display: inline-block; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--text) 45%, transparent); vertical-align: middle; }
 .dot.big { width: 26px; height: 26px; }
 
 /* Detail */
 .detail .hero, .detail .photo { width: calc(100% + 32px); margin: 0 -16px; aspect-ratio: 4 / 3; background: var(--surface-2); overflow: hidden; }
-.detail .photo img { object-fit: contain; background: #000; }
+.detail .photo img { object-fit: contain; background: var(--surface-2); }
 .credit { font-size: 0.72rem; color: var(--muted); text-align: right; margin: 4px 0 10px; }
 .detail h1 { margin-top: 12px; }
 .sci { font-style: italic; color: var(--muted); margin-top: 2px; }
@@ -217,7 +214,7 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--accent), 
 .hero-cta { display: grid; justify-items: center; text-align: center; gap: 4px; padding: 6vh 8px 0; }
 .hero-cta .btn.wide { max-width: 360px; }
 .big-icon { font-size: 4rem; line-height: 1; }
-.preview { width: 100%; max-height: 300px; object-fit: contain; border-radius: var(--radius); background: #000; display: block; margin-bottom: 8px; }
+.preview { width: 100%; max-height: 300px; object-fit: contain; border-radius: var(--radius); background: var(--surface-2); display: block; margin-bottom: 8px; }
 .capture input.search { margin: 6px 0 10px; }
 .form { display: grid; gap: 12px; }
 .field { display: grid; gap: 4px; background: var(--surface); padding: 12px 14px; border-radius: var(--radius); }
@@ -229,6 +226,8 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--accent), 
 .mapnote { text-align: center; color: var(--muted); font-size: 0.85rem; }
 .pin span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); box-shadow: 0 2px 6px rgb(0 0 0 / 0.3); font-size: 1rem; }
 .leaflet-container { font: inherit; }
+.leaflet-container .leaflet-control-attribution { font-size: 0.65rem; background: color-mix(in srgb, var(--surface) 80%, transparent); color: var(--muted); }
+.leaflet-container .leaflet-control-attribution a { color: inherit; }
 
 /* Settings */
 .card-list { background: var(--surface); border-radius: var(--radius); padding: 6px 14px 12px; display: grid; gap: 4px; }
@@ -280,7 +279,14 @@ dialog::backdrop { background: rgb(0 0 0 / 0.4); }
 }
 .tab .icon { width: 24px; height: 24px; }
 .tab.active { color: var(--accent); }
-.tab.capture .icon { width: 30px; height: 30px; }
+.tab.capture { color: var(--text); }
+.tab.capture .icon {
+  width: 50px; height: 50px; padding: 12px; margin-top: -18px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-text);
+  box-shadow: 0 0 0 4px var(--bg), 0 4px 12px rgb(0 0 0 / 0.22);
+}
+.tab.capture.active { color: var(--accent); }
+.tab:focus-visible, .btn:focus-visible, .card:focus-visible, .species-row:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
 #toast {
   position: fixed; left: 50%; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px); z-index: 2000;
@@ -351,3 +357,15 @@ label.btn[aria-disabled="true"] { opacity: 0.55; pointer-events: none; }
   font-weight: 700; font-size: 0.85rem; color: var(--accent); pointer-events: none;
 }
 .identifying { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.9rem; }
+
+/* Capture landing */
+.btn.tall { min-height: 56px; font-size: 1.05rem; }
+.btn .icon { width: 22px; height: 22px; }
+.hero-cta .or { margin: 14px 0 2px; font-size: 0.82rem; color: var(--muted); }
+.hero-cta .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+.hero-cta .pair .btn { padding: 0 8px; font-size: 0.88rem; text-decoration: none; }
+
+/* The identifier's suggestions stand apart from the full species list */
+.suggestions { background: var(--accent-soft); border-radius: var(--radius); padding: 10px 10px 6px; }
+.suggestions h2 { margin: 0 4px 8px; }
+.suggestions p { margin-left: 4px; margin-right: 4px; }
