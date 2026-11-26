@@ -7,6 +7,16 @@ import { REGIONS, emptyCriteria, matches } from '../model.js';
 import { formatCoord, formatDate, h, speciesImage, toast } from '../ui.js';
 import { speciesRow } from './guide.js';
 
+function icon(name) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'icon');
+  svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  use.setAttribute('href', `icons/sprite.svg#${name}`);
+  svg.append(use);
+  return svg;
+}
+
 function freshState() {
   return {
     step: 'start',          // 'start' | 'pick' | 'confirm'
@@ -106,10 +116,12 @@ function startStep(app, state, rerender) {
       h('div.big-icon', { 'aria-hidden': 'true' }, '📷'),
       h('h2', 'Spot a bird?'),
       h('p.muted', 'Photograph it to add it to your collection — or just log it.'),
-      h('label.btn.primary.wide', { for: 'camera-input' }, 'Take photo'), cameraInput,
+      h('label.btn.primary.wide.tall', { for: 'camera-input' }, icon('camera'), 'Take photo'), cameraInput,
       h('label.btn.wide', { for: 'library-input' }, 'Choose from photos'), libraryInput,
-      h('a.btn.wide', { href: '#/listen' }, '🎙 Identify by sound'),
-      h('button.btn.wide', { type: 'button', onclick: withoutPhoto }, 'Log without a photo'),
+      h('p.or', 'No photo?'),
+      h('div.pair',
+        h('a.btn', { href: '#/listen' }, '🎙 Identify by sound'),
+        h('button.btn', { type: 'button', onclick: withoutPhoto }, 'Log without a photo')),
       h('p.muted.small', `${have} of ${species.length} ${REGIONS[app.region]?.name ?? ''} species collected`),
     ),
   ];
@@ -145,7 +157,7 @@ function photoSuggestions(app, state, choose) {
     return h('p.notice', 'Couldn’t recognise this bird. The identifier knows only some Australian birds (77 of 500), so choose it below.');
   }
   return h('div.suggestions',
-    h('h2', id.unsure ? 'Possible matches' : 'Suggestions'),
+    h('h2', id.unsure ? 'Possible matches' : 'Suggested from your photo'),
     id.unsure ? h('p.muted.small', 'Not sure — this may be a bird the identifier doesn’t know. Compare with your photo before choosing.') : null,
     h('ul.rows', id.suggestions.map(({ code, confidence }) => {
       const s = app.catalog.get(code);
