@@ -121,6 +121,30 @@ export class SightingStore extends EventTarget {
     return url;
   }
 
+  /**
+   * The collection for the public read-only showcase: species, date and a
+   * small thumbnail per sighting. Locations and notes are left out.
+   */
+  async exportShowcase() {
+    const sightings = [];
+    for (const s of this.sightings) {
+      const record = s.hasPhoto === false ? null
+        : await request(this.db.transaction('photos').objectStore('photos').get(s.id));
+      sightings.push({
+        id: s.id,
+        speciesCode: s.speciesCode,
+        speciesCommonName: s.speciesCommonName,
+        speciesSciName: s.speciesSciName,
+        capturedAt: s.capturedAt,
+        identifiedBy: s.identifiedBy ?? null,
+        mlTopConfidence: s.identifiedBy === 'sound' ? s.mlTopConfidence ?? null : null,
+        hasPhoto: Boolean(record?.thumb ?? record?.full),
+        thumb: record ? await blobToDataURL(record.thumb ?? record.full) : null,
+      });
+    }
+    return { version: 1, exportedAt: new Date().toISOString(), sightings };
+  }
+
   #revoke(id) {
     for (const kind of ['thumb', 'full']) {
       const key = `${id}:${kind}`;
@@ -130,4 +154,46 @@ export class SightingStore extends EventTarget {
       }
     }
   }
+}
+
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+/** Read-only store for the showcase: sightings come from an exported showcase.json. */
+export class ShowcaseStore extends EventTarget {
+  constructor(url = 'data/showcase.json') {
+    super();
+    this.url = url;
+    this.sightings = [];
+    this.collected = new Set();
+    this.latest = new Map();
+    this.exportedAt = null;
+  }
+
+  async open() {
+    try {
+      const data = await (await fetch(this.url)).json();
+      this.exportedAt = data.exportedAt ?? null;
+      this.sightings = (data.sightings ?? [])
+        .filter((s) => s?.id && s.speciesCode && s.capturedAt)
+        .map((s) => ({ ...s, latitude: null, longitude: null, notes: null, hasPhoto: Boolean(s.thumb) }))
+        .sort((a, b) => (a.capturedAt < b.capturedAt ? 1 : -1));
+    } catch {
+      this.sightings = []; // no export published yet
+    }
+    this.collected = new Set(this.sightings.map((s) => s.speciesCode));
+    for (const s of this.sightings) if (!this.latest.has(s.speciesCode)) this.latest.set(s.speciesCode, s);
+    return this;
+  }
+
+  isCollected(code) { return this.collected.has(code); }
+  ofSpecies(code) { return this.sightings.filter((s) => s.speciesCode === code); }
+  get(id) { return this.sightings.find((s) => s.id === id) ?? null; }
+  async photoURL(id) { return this.get(id)?.thumb ?? null; }
 }

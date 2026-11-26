@@ -34,6 +34,10 @@ phone or computer before the iOS build is on your device.
 this repo's Releases and sideload it with your own Apple ID — see
 [SIDELOADING.md](SIDELOADING.md).
 
+**Read-only showcase:** `<site>/view/` is a browse-only copy (Collection,
+Field Guide, Sightings) showing the collection exported from the app — see
+[`web/showcase/`](web/showcase/README.md).
+
 ## Quick start
 
 ### iOS app (needs a Mac with Xcode 16.3 or later)

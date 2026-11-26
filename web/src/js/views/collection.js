@@ -1,4 +1,5 @@
 import { REGIONS, emptyCriteria, matches } from '../model.js';
+import { READ_ONLY } from '../mode.js';
 import { GRID_SIZES, GROUPINGS, sections } from '../sections.js';
 import { h, sightingPicture, speciesImage } from '../ui.js';
 import { filterBar } from './filters.js';
@@ -97,7 +98,7 @@ export function collectionView(app) {
       h('div.grid', section.species.map((s) => card(app, s))),
     ]).flat().filter(Boolean));
     empty.textContent = entries.length ? '' : (state.show === 'collected'
-      ? 'Nothing collected yet — head to Capture and photograph your first bird.'
+      ? (READ_ONLY ? 'Nothing collected yet.' : 'Nothing collected yet — head to Capture and photograph your first bird.')
       : 'No species match. Try clearing filters.');
   }
   renderGrid();
@@ -105,8 +106,12 @@ export function collectionView(app) {
   return h('section.view',
     h('header.top',
       h('h1', 'Collection'),
-      h('a.iconbtn', { href: '#/settings', 'aria-label': 'Settings' }, '⚙︎'),
+      READ_ONLY
+        ? h('a.iconbtn', { href: '#/credits', 'aria-label': 'Credits' }, 'ⓘ')
+        : h('a.iconbtn', { href: '#/settings', 'aria-label': 'Settings' }, '⚙︎'),
     ),
+    READ_ONLY ? h('p.muted.small.showcase-note', 'A read-only look at a Down Under Bird Collector collection'
+      + (store.exportedAt ? `, updated ${new Date(store.exportedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}.` : '.')) : null,
     h('div.progress-card',
       h('div.row',
         h('strong', `${region.flag} ${have} of ${species.length} collected`),

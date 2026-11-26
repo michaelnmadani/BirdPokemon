@@ -396,6 +396,37 @@ try {
     if (existsSync(resolve(root, 'dist/models/birdnet'))) await page.getByText('Downloaded — works offline').waitFor();
   });
 
+  await step('Read-only showcase shows an exported collection and nothing can be changed', async () => {
+    const exported = await page.evaluate(() => window.dubc.store.exportShowcase());
+    assert.ok(exported.sightings.length >= 2);
+    assert.ok(exported.sightings.some((s) => s.thumb?.startsWith('data:image/')), 'photos are exported as thumbnails');
+    assert.ok(exported.sightings.every((s) => !('latitude' in s) && !('notes' in s)), 'no locations or notes');
+    const collectedSpecies = new Set(exported.sightings.map((s) => s.speciesCode)).size;
+    await context.route('**/view/data/showcase.json', (route) => route.fulfill({ json: exported }));
+
+    await page.goto(`${base}view/`);
+    await page.getByText(new RegExp(`${collectedSpecies} of 500 collected`)).waitFor();
+    await page.getByText(/A read-only look at a Down Under Bird Collector collection, updated /).waitFor();
+    assert.deepEqual(await page.locator('#tabbar a').allTextContents(), ['Collection', 'Field Guide', 'Sightings']);
+    assert.equal(await page.getByRole('link', { name: 'Settings' }).count(), 0);
+    assert.equal(await page.locator('.card.collected').count(), collectedSpecies);
+
+    await tab('Sightings').click();
+    await page.locator('h1', { hasText: 'Sightings' }).waitFor();
+    assert.equal(await page.locator('.species-row').count(), exported.sightings.length);
+    await page.locator('.species-row').first().click();
+    await page.locator('section.detail h1').waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Delete sighting' }).count(), 0);
+
+    // Capture, Nearby and Settings don't exist here: their addresses fall back to the collection.
+    for (const route of ['capture', 'nearby', 'settings', 'listen']) {
+      await page.goto(`${base}view/#/${route}`);
+      await page.locator('h1', { hasText: 'Collection' }).waitFor();
+    }
+    await page.getByRole('link', { name: 'Credits' }).click();
+    await page.getByRole('heading', { name: 'Credits' }).waitFor();
+  });
+
   assert.deepEqual(errors, [], `Console/page errors:\n${errors.join('\n')}`);
   console.log('\nAll end-to-end checks passed.');
 } catch (err) {
