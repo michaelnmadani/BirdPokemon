@@ -1,4 +1,5 @@
 import { backButton, confirmDialog, formatCoord, formatDate, h, sightingPicture } from '../ui.js';
+import { READ_ONLY } from '../mode.js';
 import { smallMap } from './map.js';
 
 export function sightingRow(app, s) {
@@ -7,7 +8,7 @@ export function sightingRow(app, s) {
     h('div.row-text',
       h('strong', s.speciesCommonName),
       h('span.muted.small', formatDate(s.capturedAt)),
-      h('span.muted.small', s.latitude != null ? formatCoord(s.latitude, s.longitude) : 'No location'),
+      READ_ONLY ? null : h('span.muted.small', s.latitude != null ? formatCoord(s.latitude, s.longitude) : 'No location'),
     ),
   );
 }
@@ -16,13 +17,13 @@ export function sightingsView(app) {
   const { sightings } = app.store;
   return h('section.view',
     h('header.top', h('h1', 'Sightings'), h('span.muted.small', `${sightings.length} total`),
-      h('a.btn.small', { href: '#/map' }, 'Map')),
+      READ_ONLY ? null : h('a.btn.small', { href: '#/map' }, 'Map')),
     sightings.length
       ? h('ul.rows', sightings.map((s) => h('li', sightingRow(app, s))))
       : h('div.empty-state',
         h('p.big', '🐦'),
         h('p', 'No sightings yet.'),
-        h('a.btn.primary', { href: '#/capture' }, 'Capture your first bird')),
+        READ_ONLY ? null : h('a.btn.primary', { href: '#/capture' }, 'Capture your first bird')),
   );
 }
 
@@ -57,9 +58,9 @@ export function sightingDetailView(app, id) {
     species ? h('p', h('a', { href: `#/species/${encodeURIComponent(species.ebirdCode)}` }, 'Field guide entry ›')) : null,
     hasLocation
       ? [mapHolder, h('p.muted.small', `${formatCoord(s.latitude, s.longitude, 5)}${s.locationSource === 'photo' ? ' · from the photo' : ''}`)]
-      : h('p.muted', 'No location was saved for this sighting.'),
+      : (READ_ONLY ? null : h('p.muted', 'No location was saved for this sighting.')),
     s.notes ? [h('h2', 'Notes'), h('p.notes', s.notes)] : null,
-    h('button.btn.danger.wide', { type: 'button', onclick: remove }, 'Delete sighting'),
+    READ_ONLY ? null : h('button.btn.danger.wide', { type: 'button', onclick: remove }, 'Delete sighting'),
   );
 
   let map = null;

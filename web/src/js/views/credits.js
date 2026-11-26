@@ -1,5 +1,6 @@
 // Every photo, watercolour and recording in the field guide with its creator
 // and licence, as the Creative Commons licences require.
+import { READ_ONLY } from '../mode.js';
 import { licenceLabel } from '../model.js';
 import { backButton, h } from '../ui.js';
 
@@ -61,7 +62,7 @@ export function creditsView(app) {
   const calls = species.filter((s) => s.callURL).length;
   const paintings = species.filter((s) => app.catalog.art.has(s.ebirdCode)).length;
   return h('section.view.credits',
-    h('header.top', backButton(app, 'settings', 'Settings'), h('h1', 'Credits')),
+    h('header.top', backButton(app, READ_ONLY ? 'collection' : 'settings', READ_ONLY ? 'Back' : 'Settings'), h('h1', 'Credits')),
     h('p.muted.small',
       `${photos} species photos by iNaturalist contributors, ${calls} recordings from iNaturalist and xeno-canto`,
       paintings ? `, and ${paintings} watercolours painted from those photos` : '',

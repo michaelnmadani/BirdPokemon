@@ -109,4 +109,24 @@ const indexPath = join(dist, 'index.html');
 writeFileSync(indexPath, readFileSync(indexPath, 'utf8').replace('__BUILD__', version));
 
 const size = files.reduce((n, f) => n + statSync(f).size, 0);
-console.log(`Built web/dist (${regions.join(', ')} data, ${precache.length} precached files, ${(size / 1e6).toFixed(2)} MB, sound ID ${hasBirdnet ? 'included' : 'not included'}, version ${version}).`);
+// Read-only showcase at view/: the same app without capture, sound/photo ID or
+// saving, showing the collection exported to web/showcase/showcase.json.
+const view = join(dist, 'view');
+const showcase = JSON.parse(readFileSync(join(root, 'showcase/showcase.json'), 'utf8'));
+if (!Array.isArray(showcase.sightings)) throw new Error('showcase/showcase.json needs a "sightings" list');
+const skip = new Set(['view', 'models', 'sw.js', 'manifest.webmanifest']);
+mkdirSync(view);
+for (const name of readdirSync(dist).filter((n) => !skip.has(n))) {
+  cpSync(join(dist, name), join(view, name), {
+    recursive: true,
+    filter: (src) => !/^vendor[\\/](litert|amr)([\\/]|$)/.test(relative(dist, src)),
+  });
+}
+writeFileSync(join(view, 'data/showcase.json'), JSON.stringify(showcase));
+writeFileSync(join(view, 'index.html'), readFileSync(join(view, 'index.html'), 'utf8')
+  .replace('<html lang="en-AU"', '<html lang="en-AU" data-readonly')
+  .replace('<title>Down Under Bird Collector</title>', '<title>Bird collection · Down Under Bird Collector</title>')
+  .replace(/\s*<link rel="manifest"[^>]*>/, '')
+  .replace('Loading your collection…', 'Loading the collection…'));
+
+console.log(`Built web/dist (${regions.join(', ')} data, ${precache.length} precached files, ${(size / 1e6).toFixed(2)} MB, sound ID ${hasBirdnet ? 'included' : 'not included'}, showcase with ${showcase.sightings.length} sightings, version ${version}).`);

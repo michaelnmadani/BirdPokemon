@@ -1,5 +1,6 @@
 import { Catalog } from './catalog.js';
-import { SightingStore } from './store.js';
+import { READ_ONLY } from './mode.js';
+import { ShowcaseStore, SightingStore } from './store.js';
 import { h, toast } from './ui.js';
 import { collectionView } from './views/collection.js';
 import { guideView } from './views/guide.js';
@@ -20,6 +21,10 @@ const TABS = [
   { route: 'nearby', label: 'Nearby', icon: 'pin' },
   { route: 'sightings', label: 'Sightings', icon: 'list' },
 ];
+
+const SHOWCASE_TABS = TABS.filter((tab) => ['collection', 'guide', 'sightings'].includes(tab.route));
+// Screens that make sense without capturing or saving anything.
+const SHOWCASE_ROUTES = ['collection', 'guide', 'species', 'groups', 'group', 'sightings', 'sighting', 'credits'];
 
 const ROUTES = {
   collection: collectionView,
@@ -86,7 +91,8 @@ class App {
 
   route() {
     const [name, ...params] = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
-    return ROUTES[name] ? { name, params } : { name: 'collection', params: [] };
+    const allowed = ROUTES[name] && (!READ_ONLY || SHOWCASE_ROUTES.includes(name));
+    return allowed ? { name, params } : { name: 'collection', params: [] };
   }
 
   render() {
@@ -106,7 +112,7 @@ class App {
 
   renderTabs(active) {
     // Static markup (labels are constants), so a template string is safe here.
-    this.tabbar.innerHTML = TABS.map((tab) => {
+    this.tabbar.innerHTML = (READ_ONLY ? SHOWCASE_TABS : TABS).map((tab) => {
       const classes = ['tab', tab.route === active ? 'active' : '', tab.route === 'capture' ? 'capture' : ''].join(' ').trim();
       const current = tab.route === active ? ' aria-current="page"' : '';
       return `<a class="${classes}" href="#/${tab.route}"${current}>`
@@ -119,7 +125,7 @@ class App {
 async function boot() {
   const status = document.getElementById('boot-status');
   try {
-    const [catalog, store] = await Promise.all([new Catalog().load(), new SightingStore().open()]);
+    const [catalog, store] = await Promise.all([new Catalog().load(), (READ_ONLY ? new ShowcaseStore() : new SightingStore()).open()]);
     const app = new App(catalog, store);
     window.addEventListener('hashchange', () => app.render());
     store.addEventListener('change', () => {
@@ -137,6 +143,8 @@ async function boot() {
     console.error(err);
     if (status) status.textContent = `Couldn't start: ${err.message}`;
   }
+
+  if (READ_ONLY) return; // the showcase is a plain web page: no install, no offline cache
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').then((reg) => {

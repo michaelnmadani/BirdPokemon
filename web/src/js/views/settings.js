@@ -104,6 +104,9 @@ export function settingsView(app) {
       h('p.muted.small', 'Species photos you’ve already looked at are kept automatically. Download them all before heading somewhere without signal.'),
     ),
 
+    h('h2', 'Showcase'),
+    showcaseCard(app),
+
     h('h2', 'Install on iPhone'),
     h('p.muted', 'In Safari, tap Share → “Add to Home Screen”. The app then opens full-screen and works without a connection.'),
 
@@ -131,6 +134,36 @@ function pictureStyleCard(app) {
   return h('div.card-list',
     group,
     h('p.muted.small', `Watercolours of ${app.catalog.art.size} species, painted from the field guide photos. Species without one show the photo. Your own sightings always show your photos.`));
+}
+
+/** Export the collection for the public read-only page (web/showcase in the repo). */
+function showcaseCard(app) {
+  const button = h('button.btn.wide', { type: 'button' }, 'Export my collection');
+  button.addEventListener('click', async () => {
+    if (!app.store.sightings.length) return toast('There are no sightings to export yet.');
+    button.disabled = true;
+    try {
+      const data = await app.store.exportShowcase();
+      const file = new File([JSON.stringify(data)], 'showcase.json', { type: 'application/json' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Bird collection showcase' });
+      } else {
+        const url = URL.createObjectURL(file);
+        const link = h('a', { href: url, download: file.name });
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+        toast('Saved showcase.json to your downloads.');
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') toast(`Couldn’t export: ${err.message}`);
+    }
+    button.disabled = false;
+  });
+  return h('div.card-list',
+    h('p.muted.small', 'Makes a showcase.json for the public read-only page: each sighting’s bird, date and a small photo. Locations and notes are not included.'),
+    button);
 }
 
 function soundCard(app) {

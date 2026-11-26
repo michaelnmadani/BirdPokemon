@@ -1,3 +1,4 @@
+import { READ_ONLY } from '../mode.js';
 import { COLORS, REGIONS, artCredit, callCredit, photoCredit, sizeInfo } from '../model.js';
 import { backButton, colorDot, h, speciesImage } from '../ui.js';
 import { sightingRow } from './sightings.js';
@@ -86,10 +87,10 @@ export function speciesView(app, code) {
       h('dt', 'Order'), h('dd', species.order),
       h('dt', 'Regions'), h('dd', species.regionCodes.map((r) => REGIONS[r]?.flag ?? r).join(' ')),
     ),
-    h('h2', 'Your sightings'),
+    h('h2', READ_ONLY ? 'Sightings' : 'Your sightings'),
     mine.length
       ? h('ul.rows', mine.map((s) => h('li', sightingRow(app, s))))
-      : h('p.muted', 'You haven’t collected one yet — go find it!'),
+      : h('p.muted', READ_ONLY ? 'Not collected yet.' : 'You haven’t collected one yet — go find it!'),
     h('p.links',
       h('a', { href: species.ebirdURL, target: '_blank', rel: 'noopener' }, 'Read more on eBird ↗'),
       species.wikipediaURL ? h('a', { href: species.wikipediaURL, target: '_blank', rel: 'noopener' }, 'Wikipedia ↗') : null,
